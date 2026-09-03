@@ -1,0 +1,508 @@
+<div id="notes-src" hidden>
+
+<details class="ch" id="ch1" data-day="1">
+<summary><span class="num">CH 01<small>Step 1</small></span><span class="name">会計の地図<small>財務諸表とは・開示のルール</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">財務諸表は会社の<b>成績表（もうけ＝損益計算書）</b>と<b>健康診断書（財産＝貸借対照表）</b>と<b>家計簿（お金の出入り＝キャッシュ・フロー計算書）</b>のセット。まず「誰が・どの法律で・何を作らされているか」の地図を持つと、あとの暗記が全部つながる。</div>
+
+<h3>財務諸表の登場人物</h3>
+<dl class="terms">
+<div><dt>貸借対照表（B/S）</dt><dd><span class="k">決算日時点</span>の財政状態を表す。「持ち物（資産）」と「その調達源（負債・純資産）」の一覧。ストック（ある時点の残高）。</dd></div>
+<div><dt>損益計算書（P/L）</dt><dd><span class="k">一会計期間</span>の経営成績（収益−費用＝利益）。フロー（期間の合計）。</dd></div>
+<div><dt>キャッシュ・フロー計算書（C/F）</dt><dd>一会計期間の<span class="k">現金の増減</span>を営業・投資・財務の3区分で表す。利益が出ていても現金が尽きれば倒産（<span class="k">黒字倒産</span>）するので、利益とは別に見る。</dd></div>
+<div><dt>株主資本等変動計算書</dt><dd>純資産の各項目が期中に<span class="k">どう増減したか</span>（配当・増資・当期純利益など）を表す。</dd></div>
+<div><dt>会計期間</dt><dd>通常1年。期首→期末。決算日（例：3月31日）で締める。</dd></div>
+<div><dt>個別と連結</dt><dd><span class="k">個別</span>＝1社単体の財務諸表。<span class="k">連結</span>＝親会社＋子会社を<span class="k">1つの企業グループ</span>とみなして作る財務諸表。上場企業の開示の主役は連結。</dd></div>
+</dl>
+
+<h3>2つの法律による開示（頻出）</h3>
+<div class="tw"><table>
+<tr><th></th><th>金融商品取引法</th><th>会社法</th></tr>
+<tr><td>目的</td><td><span class="k">投資者</span>の保護</td><td><span class="k">株主・債権者</span>の保護</td></tr>
+<tr><td>対象</td><td>上場会社など</td><td>すべての株式会社</td></tr>
+<tr><td>作る書類</td><td><span class="k">財務諸表</span>（有価証券報告書の中身）</td><td><span class="k">計算書類</span></td></tr>
+<tr><td>内訳</td><td>B/S、P/L、株主資本等変動計算書、<span class="k">C/F計算書</span>、附属明細表</td><td>B/S、P/L、株主資本等変動計算書、<span class="k">個別注記表</span>（＋事業報告・附属明細書）</td></tr>
+<tr><td>監査</td><td><span class="k">公認会計士・監査法人</span></td><td>会計監査人（<span class="k">大会社</span>：資本金5億円以上または負債200億円以上）</td></tr>
+</table></div>
+<div class="tip">C/F計算書が入るのは<b>金融商品取引法の財務諸表だけ</b>。会社法の計算書類には入らない。ここは選択肢の定番。</div>
+
+<h3>有価証券報告書まわり</h3>
+<dl class="terms">
+<div><dt>有価証券報告書</dt><dd>上場会社等が<span class="k">事業年度ごと</span>に提出する開示書類。<span class="k">EDINET</span>で誰でも閲覧できる。</dd></div>
+<div><dt>半期報告書</dt><dd>期中の開示。従来の四半期報告書は廃止され、<span class="k">半期報告書</span>へ移行した（決算短信での四半期開示は継続）。</dd></div>
+<div><dt>会計基準</dt><dd>日本基準のほか、国際会計基準（<span class="k">IFRS</span>）などがある。本試験は日本基準ベース。</dd></div>
+</dl>
+
+<h3>複式簿記のいちばん大事な式</h3>
+<div class="fx"><span class="eq">資産 ＝ <b class="k">負債 ＋ 純資産</b></span><span class="eq">利益 ＝ <b class="k">収益 − 費用</b></span></div>
+<p class="small muted">B/Sは左右が必ず一致する（バランスする）。P/Lの当期純利益は、B/Sの純資産（利益剰余金）を増やす——この「つながり」を意識すると全体が1枚の絵になる。</p>
+</div>
+</details>
+
+<details class="ch" id="ch2" data-day="1">
+<summary><span class="num">CH 02<small>Step 1–2</small></span><span class="name">貸借対照表<small>資産・負債・純資産の並び方</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">B/Sは「<b>上から順に現金になりやすい</b>」並び（流動性配列法）。左（資産）は<b>流動→固定→繰延</b>、右は<b>流動負債→固定負債→純資産</b>。どの科目がどの箱に入るかを問う問題が最頻出。</div>
+
+<h3>流動と固定を分ける2つの基準（超頻出）</h3>
+<dl class="terms">
+<div><dt>正常営業循環基準</dt><dd>仕入→在庫→販売→回収という<span class="k">本業のサイクルの中にある項目</span>（売掛金・受取手形・棚卸資産・買掛金・支払手形など）は、期間に関係なく<span class="k">流動</span>とする。<b>先に</b>この基準を適用。</dd></div>
+<div><dt>一年基準</dt><dd>循環の外の項目は、決算日の翌日から<span class="k">1年以内</span>に現金化・支払期限が来るものを流動、超えるものを固定とする（貸付金・借入金・預金など）。</dd></div>
+</dl>
+<div class="tip">「売掛金は回収まで1年超なら固定資産になる」は誤り。営業循環内なので<b>常に流動資産</b>。</div>
+
+<h3>資産の部</h3>
+<div class="tw"><table>
+<tr><th>区分</th><th>主な科目</th></tr>
+<tr><td><span class="k">流動資産</span></td><td>現金及び預金、受取手形、売掛金、電子記録債権、<span class="k">有価証券</span>（売買目的など）、商品及び製品・仕掛品・原材料（＝<span class="k">棚卸資産</span>）、前払費用、△貸倒引当金</td></tr>
+<tr><td>固定資産①<span class="k">有形固定資産</span></td><td>建物、機械装置、車両運搬具、土地、<span class="k">建設仮勘定</span>（建設中。まだ減価償却しない）</td></tr>
+<tr><td>固定資産②<span class="k">無形固定資産</span></td><td><span class="k">のれん</span>、ソフトウェア、特許権・商標権など（形はないが償却する。土地と建設仮勘定は償却しない）</td></tr>
+<tr><td>固定資産③<span class="k">投資その他の資産</span></td><td><span class="k">投資有価証券</span>、関係会社株式、長期貸付金、長期前払費用、繰延税金資産</td></tr>
+<tr><td><span class="k">繰延資産</span></td><td>創立費・開業費・株式交付費・社債発行費・開発費の<span class="k">5つ</span>。すでに支出した費用を、効果が及ぶ期間に配分するため例外的に資産計上したもの</td></tr>
+</table></div>
+<dl class="terms">
+<div><dt>当座資産</dt><dd>流動資産のうち<span class="k">特に換金しやすい</span>もの＝<span class="k">現金及び預金＋受取手形・売掛金（−貸倒引当金）＋有価証券</span>。棚卸資産は含まない。当座比率で使う。</dd></div>
+<div><dt>貸倒引当金</dt><dd>売掛金などが回収できない見込み額をあらかじめ見積もった<span class="k">マイナスの資産（評価勘定）</span>。資産から控除する形で表示。</dd></div>
+</dl>
+
+<h3>負債の部</h3>
+<div class="tw"><table>
+<tr><th>区分</th><th>主な科目</th></tr>
+<tr><td><span class="k">流動負債</span></td><td>支払手形、買掛金、電子記録債務、<span class="k">短期借入金</span>、未払金・未払費用、前受金、賞与引当金、1年内返済予定の長期借入金</td></tr>
+<tr><td><span class="k">固定負債</span></td><td><span class="k">社債</span>、長期借入金、退職給付引当金（連結では<span class="k">退職給付に係る負債</span>）、繰延税金負債</td></tr>
+</table></div>
+
+<h3>純資産の部（2級の頻出ゾーン）</h3>
+<div class="tw"><table>
+<tr><th>区分</th><th>中身</th></tr>
+<tr><td rowspan="4"><span class="k">株主資本</span></td><td><span class="k">資本金</span>：株主が払い込んだ元手の基本部分</td></tr>
+<tr><td><span class="k">資本剰余金</span>：資本準備金＋その他資本剰余金（払込のうち資本金にしなかった部分など）</td></tr>
+<tr><td><span class="k">利益剰余金</span>：利益準備金＋その他利益剰余金（任意積立金・<span class="k">繰越利益剰余金</span>）。過去の利益の蓄積</td></tr>
+<tr><td><span class="k">自己株式</span>：自社で買い戻した株。株主資本から<span class="k">控除（マイナス表示）</span></td></tr>
+<tr><td>その他の包括利益累計額<br><span class="small muted">（個別では評価・換算差額等）</span></td><td><span class="k">その他有価証券評価差額金</span>、繰延ヘッジ損益、<span class="k">為替換算調整勘定</span>（連結）、退職給付に係る調整累計額（連結）</td></tr>
+<tr><td>新株予約権</td><td>あとで株を引き受けられる権利（ストック・オプションなど）</td></tr>
+<tr><td>非支配株主持分</td><td><span class="k">連結だけ</span>に出る。子会社の純資産のうち親会社以外の株主の取り分</td></tr>
+</table></div>
+<div class="fx"><span class="eq">自己資本 ＝ <b class="k">純資産 −（新株予約権 ＋ 非支配株主持分）</b> ＝ 株主資本 ＋ その他の包括利益累計額</span></div>
+<div class="memo">「元手（資本金・資本剰余金）」と「もうけの蓄積（利益剰余金）」を分けて覚える。配当すると利益剰余金が減る。自己株式は「マイナス」——ここが選択肢でよく突かれる。</div>
+</div>
+</details>
+<details class="ch" id="ch3" data-day="2">
+<summary><span class="num">CH 03<small>Step 3</small></span><span class="name">損益計算書<small>5つの利益と段階表示</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">P/Lは上から<b>5つの利益</b>を段階的に計算する表。「どの収益・費用が、どの利益の手前で引かれるか」を体で覚えれば、知識問題も分析問題もここが土台になる。</div>
+
+<h3>P/Lの階段（これを白紙に書けるように）</h3>
+<div class="tw"><table>
+<tr><th>段階</th><th>計算</th><th>意味</th></tr>
+<tr><td>①<span class="k">売上総利益</span></td><td>売上高 − <span class="k">売上原価</span></td><td>商品力のもうけ（粗利）</td></tr>
+<tr><td>②<span class="k">営業利益</span></td><td>① − <span class="k">販売費及び一般管理費</span></td><td><span class="k">本業</span>のもうけ</td></tr>
+<tr><td>③<span class="k">経常利益</span></td><td>② ＋ 営業外収益 − 営業外費用</td><td>財務活動も含む<span class="k">経常的</span>な実力</td></tr>
+<tr><td>④税引前当期純利益</td><td>③ ＋ 特別利益 − 特別損失</td><td>臨時の損益も入れた利益</td></tr>
+<tr><td>⑤<span class="k">当期純利益</span></td><td>④ − 法人税等（法人税等調整額を含む）</td><td>最終のもうけ。株主のもの</td></tr>
+</table></div>
+<dl class="terms">
+<div><dt>売上原価</dt><dd>売れた分の仕入・製造コスト。商業では<span class="k">期首棚卸高＋当期仕入高−期末棚卸高</span>。売れ残り（期末在庫）は費用にならずB/Sの棚卸資産へ。</dd></div>
+<div><dt>販売費及び一般管理費</dt><dd>給料、広告宣伝費、<span class="k">減価償却費</span>、貸倒引当金繰入、<span class="k">研究開発費</span>（発生時に全額費用）、のれん償却額など。</dd></div>
+<div><dt>営業外収益／費用</dt><dd><span class="k">受取利息・受取配当金</span>／<span class="k">支払利息</span>、社債利息など、本業以外で毎期経常的に発生するもの。連結では<span class="k">持分法による投資損益</span>もここ。</dd></div>
+<div><dt>特別利益／損失</dt><dd><span class="k">臨時・巨額</span>のもの。固定資産売却益・損、<span class="k">減損損失</span>、災害損失、投資有価証券売却損益など。</dd></div>
+<div><dt>連結P/Lの下段</dt><dd>連結では ④が<span class="k">税金等調整前当期純利益</span>と呼ばれ、⑤の後に「<span class="k">非支配株主に帰属する当期純利益</span>」を差し引いて「<span class="k">親会社株主に帰属する当期純利益</span>」を表示する。</dd></div>
+</dl>
+<div class="tip">「支払利息は営業外費用」「減損損失は特別損失」「研究開発費は販管費」。置き場所を入れ替えた選択肢が定番。経常利益は英語のニュースでいう利益と違い日本基準特有の段階。</div>
+
+<h3>収益・費用の認識（軽く）</h3>
+<dl class="terms">
+<div><dt>発生主義</dt><dd>現金の受け払いでなく、<span class="k">発生した期間</span>に費用を計上する考え方。</dd></div>
+<div><dt>実現主義（収益認識）</dt><dd>収益は商品・サービスを<span class="k">提供した時点</span>で計上（収益認識基準：履行義務の充足）。前受金は売上ではなくまだ負債。</dd></div>
+<div><dt>費用収益対応の原則</dt><dd>売上とそれを生むための費用を<span class="k">同じ期間</span>に対応させる（売上原価・減価償却が典型）。</dd></div>
+</dl>
+</div>
+</details>
+
+<details class="ch" id="ch4" data-day="2">
+<summary><span class="num">CH 04<small>Step 4</small></span><span class="name">キャッシュ・フロー計算書<small>3つの区分と読み方</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">C/Fは現金の動きを<b>営業・投資・財務</b>の3区分で見る表。2級では「間接法の調整の向き」と「どの取引がどの区分か」、そして<b>符号のパターンで会社の状態を読む</b>ところまで出る。</div>
+
+<h3>3つの区分</h3>
+<div class="tw"><table>
+<tr><th>区分</th><th>中身</th><th>健全な姿</th></tr>
+<tr><td><span class="k">営業活動によるC/F</span></td><td>本業の現金収支。商品の販売・仕入、人件費、法人税等の支払</td><td><span class="k">プラス</span>が大前提</td></tr>
+<tr><td><span class="k">投資活動によるC/F</span></td><td><span class="k">固定資産の取得・売却</span>、有価証券の取得・売却、貸付</td><td>成長企業は<span class="k">マイナス</span>（投資している）</td></tr>
+<tr><td><span class="k">財務活動によるC/F</span></td><td><span class="k">借入・返済</span>、社債の発行・償還、<span class="k">増資</span>、自己株式の取得、<span class="k">配当金の支払</span></td><td>返済が進むとマイナス</td></tr>
+</table></div>
+<dl class="terms">
+<div><dt>現金及び現金同等物</dt><dd>手元現金・要求払預金＋容易に換金でき価値変動リスクが小さい<span class="k">取得日から3か月以内</span>の短期投資（定期預金など）。</dd></div>
+<div><dt>直接法と間接法</dt><dd>営業C/Fの表示方法。<span class="k">直接法</span>＝収入・支出を総額で並べる。<span class="k">間接法</span>＝税引前当期純利益から調整して求める（実務はほぼ間接法）。どちらでも<span class="k">結果の金額は同じ</span>。</dd></div>
+<div><dt>間接法の調整（向きを覚える）</dt><dd>税引前利益に、<span class="k">減価償却費・のれん償却額を＋</span>（現金が出ていかない費用だから）。<span class="k">売上債権の増加は−</span>、<span class="k">棚卸資産の増加は−</span>、<span class="k">仕入債務の増加は＋</span>。引当金の増加は＋。</dd></div>
+<div><dt>利息・配当の区分</dt><dd>原則の一つ：受取利息・受取配当金・支払利息は<span class="k">営業C/F</span>、支払配当金は<span class="k">財務C/F</span>（継続適用を条件に別法もある）。</dd></div>
+<div><dt>フリー・キャッシュ・フロー</dt><dd><span class="k">営業C/F ＋ 投資C/F</span>（簡便法）。会社が自由に使える現金。マイナス続きなら外部資金頼み。</dd></div>
+</dl>
+<div class="fx"><span class="eq">FCF ＝ <b class="k">営業CF ＋ 投資CF</b></span></div>
+
+<h3>符号パターンで読む（＋−の組合せ）</h3>
+<div class="tw"><table>
+<tr><th>営業</th><th>投資</th><th>財務</th><th>読み方</th></tr>
+<tr><td>＋</td><td>−</td><td>−</td><td><span class="k">優良型</span>：本業の現金で投資も返済もまかなう</td></tr>
+<tr><td>＋</td><td>−</td><td>＋</td><td><span class="k">積極投資型</span>：本業＋調達で大きく投資（成長期）</td></tr>
+<tr><td>＋</td><td>＋</td><td>−</td><td>資産を売って返済（リストラ・スリム化）</td></tr>
+<tr><td>−</td><td>＋</td><td>＋</td><td><span class="k">危険信号</span>：本業で現金が出ていき、資産売却と借入でしのぐ</td></tr>
+</table></div>
+<div class="tip">「利益が黒字＝営業C/Fもプラス」とは限らない。売掛金や在庫が積み上がると、黒字でも営業C/Fはマイナスになる（黒字倒産の入り口）。</div>
+</div>
+</details>
+<details class="ch" id="ch5" data-day="3">
+<summary><span class="num">CH 05<small>Step 5</small></span><span class="name">連結財務諸表の仕組み<small>子会社・持分法・のれん</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">連結は「親会社と子会社を<b>1つの会社のように合体</b>させる」作業。2級の核心論点。<b>どこまで合体するか（連結の範囲）</b>、<b>合体時に出る差額（のれん）</b>、<b>他人の取り分（非支配株主持分）</b>の3点を押さえる。</div>
+
+<h3>連結の範囲</h3>
+<dl class="terms">
+<div><dt>子会社（支配力基準）</dt><dd>議決権の<span class="k">過半数（50%超）</span>を持つ場合のほか、50%以下でも役員派遣や融資などで<span class="k">意思決定機関を実質的に支配</span>していれば子会社。原則<span class="k">すべて連結</span>（全部連結）。</dd></div>
+<div><dt>関連会社（影響力基準）</dt><dd>議決権の<span class="k">20%以上</span>などで経営方針に<span class="k">重要な影響</span>を与えられる会社。連結はせず<span class="k">持分法</span>を適用。</dd></div>
+<div><dt>持分法</dt><dd>投資額を、相手の純資産・損益の持分変動に応じて<span class="k">1行で</span>調整する方法（<span class="k">一行連結</span>）。損益は連結P/Lの営業外に「<span class="k">持分法による投資損益</span>」として表示。</dd></div>
+</dl>
+
+<h3>連結の手続き</h3>
+<dl class="terms">
+<div><dt>合算と相殺消去</dt><dd>親子のB/S・P/Lを合算し、<span class="k">親の投資と子の資本を相殺</span>、グループ内部の<span class="k">取引・債権債務・未実現利益を消去</span>する（内部でのもうけは外に売れるまで利益にしない）。</dd></div>
+<div><dt>のれん</dt><dd>子会社株式の取得額が、子会社の純資産（時価）の持分より<span class="k">高かった超過額</span>。ブランド力や超過収益力の対価。<span class="k">無形固定資産</span>に計上し、日本基準では<span class="k">20年以内</span>のその効果の及ぶ期間で規則的に償却（のれん償却額は販管費）。</dd></div>
+<div><dt>負ののれん</dt><dd>安く買えた場合の差額。発生した期に<span class="k">利益（特別利益）</span>として処理。</dd></div>
+<div><dt>非支配株主持分</dt><dd>子会社の純資産のうち<span class="k">親会社以外の株主</span>の取り分。連結B/Sの<span class="k">純資産の部</span>に表示（負債ではない）。</dd></div>
+<div><dt>連結P/Lの利益の配分</dt><dd>連結の当期純利益を「<span class="k">親会社株主に帰属する当期純利益</span>」と「<span class="k">非支配株主に帰属する当期純利益</span>」に分けて表示。分析（ROEやEPS）で使うのは<span class="k">親会社株主に帰属する</span>方。</dd></div>
+</dl>
+<div class="tip">「議決権50%以下なら必ず子会社ではない」は誤り（実質支配で子会社になる）。「のれんは毎期償却せず減損だけ」は<b>IFRSの話</b>で、日本基準では規則償却＋必要なら減損。</div>
+</div>
+</details>
+
+<details class="ch" id="ch6" data-day="3">
+<summary><span class="num">CH 06<small>Step 6</small></span><span class="name">純資産・包括利益・注記<small>変動計算書とディスクロージャー</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">2級で差がつく暗記ゾーン。<b>包括利益＝当期純利益＋その他の包括利益</b>という1本の式と、<b>注記の種類</b>（継続企業の前提・セグメント情報・後発事象）を確実に。</div>
+
+<h3>包括利益</h3>
+<div class="fx"><span class="eq">包括利益 ＝ <b class="k">当期純利益 ＋ その他の包括利益</b></span></div>
+<dl class="terms">
+<div><dt>その他の包括利益（OCI）</dt><dd>P/Lを通さずに純資産を増減させた損益。<span class="k">その他有価証券評価差額金</span>の増減、<span class="k">繰延ヘッジ損益</span>、<span class="k">為替換算調整勘定</span>、<span class="k">退職給付に係る調整額</span>など。</dd></div>
+<div><dt>包括利益計算書</dt><dd>連結で作成。P/Lと別に作る<span class="k">2計算書方式</span>と、1本にまとめる1計算書方式がある。</dd></div>
+<div><dt>B/Sとの対応</dt><dd>その他の包括利益の累積が、連結B/S純資産の「<span class="k">その他の包括利益累計額</span>」（個別では「評価・換算差額等」）。</dd></div>
+</dl>
+
+<h3>株主資本等変動計算書</h3>
+<dl class="terms">
+<div><dt>役割</dt><dd>純資産の各項目の<span class="k">期首残高→変動→期末残高</span>を示す。B/SとP/Lをつなぐ橋。</dd></div>
+<div><dt>主な変動</dt><dd><span class="k">当期純利益</span>→繰越利益剰余金の増加。<span class="k">剰余金の配当</span>→利益剰余金の減少（＋利益準備金の積立）。<span class="k">増資</span>→資本金・資本準備金の増加。<span class="k">自己株式の取得</span>→株主資本の減少。</dd></div>
+</dl>
+
+<h3>注記・その他の開示（暗記で得点）</h3>
+<dl class="terms">
+<div><dt>重要な会計方針</dt><dd>棚卸資産の評価方法や減価償却の方法など、採用したルールの注記。変更したら影響も注記。</dd></div>
+<div><dt>継続企業の前提（GC）</dt><dd>倒産の懸念など<span class="k">継続企業の前提に重要な疑義</span>があるとき、その状況と対応策を<span class="k">注記</span>する。</dd></div>
+<div><dt>後発事象</dt><dd><span class="k">決算日後</span>に発生し、次期以降の財政状態・経営成績に影響する事象（大災害、合併など）の注記。</dd></div>
+<div><dt>セグメント情報</dt><dd>事業の種類や地域などの区分ごとに売上・利益・資産を開示。経営者が使う区分で報告する<span class="k">マネジメント・アプローチ</span>。</dd></div>
+<div><dt>1株当たり情報</dt><dd>1株当たり当期純利益（EPS）・1株当たり純資産（BPS）などを注記。</dd></div>
+<div><dt>附属明細表</dt><dd>有形固定資産や引当金などの<span class="k">明細</span>。金商法の財務諸表を構成する。</dd></div>
+</dl>
+<div class="tip">「継続企業の前提の注記＝すでに倒産が確定」ではない。<b>疑義があるが対応策とあわせて開示する</b>制度。</div>
+</div>
+</details>
+
+<details class="ch" id="ch7" data-day="4">
+<summary><span class="num">CH 07<small>Step 7–8</small></span><span class="name">個別論点<small>資産の評価と負債の会計</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">知識問題の宝庫。<b>有価証券の4分類</b>と<b>減価償却</b>、<b>引当金</b>、<b>税効果</b>は毎回のように出る。「どう評価するか」「差額はどこへ行くか（P/Lか純資産か）」をセットで覚える。</div>
+
+<h3>有価証券の4分類（最頻出）</h3>
+<div class="tw"><table>
+<tr><th>分類</th><th>評価</th><th>評価差額の行き先</th></tr>
+<tr><td><span class="k">売買目的有価証券</span></td><td><span class="k">時価</span></td><td><span class="k">P/L</span>（営業外損益）</td></tr>
+<tr><td><span class="k">満期保有目的の債券</span></td><td>取得原価（<span class="k">償却原価法</span>）</td><td>—（時価評価しない）</td></tr>
+<tr><td>子会社・関連会社株式</td><td><span class="k">取得原価</span></td><td>—（個別上は原価のまま）</td></tr>
+<tr><td><span class="k">その他有価証券</span>（持ち合い株など）</td><td><span class="k">時価</span></td><td>P/Lを通さず<span class="k">純資産</span>（その他有価証券評価差額金）</td></tr>
+</table></div>
+<p class="small muted">B/S表示：売買目的＝流動資産「有価証券」、満期保有（1年超）・その他＝投資その他の資産「投資有価証券」、子会社・関連会社株式＝「関係会社株式」。</p>
+
+<h3>棚卸資産</h3>
+<dl class="terms">
+<div><dt>払出単価の計算</dt><dd><span class="k">個別法・先入先出法・移動平均法・総平均法</span>・売価還元法など。先入先出法は「古い在庫から売れた」とみなす。</dd></div>
+<div><dt>期末評価</dt><dd>収益性が低下したら、<span class="k">正味売却価額</span>まで簿価を切り下げ、評価損を計上（低価法的処理）。</dd></div>
+</dl>
+
+<h3>固定資産・減価償却・減損</h3>
+<dl class="terms">
+<div><dt>減価償却</dt><dd>取得原価を使用期間に配分する手続き。<span class="k">定額法</span>（毎期同額）・<span class="k">定率法</span>（初めほど多い）・生産高比例法。<span class="k">土地と建設仮勘定は償却しない</span>。</dd></div>
+<div><dt>減損会計</dt><dd>収益性の低下で投資額の回収が見込めないとき、帳簿価額を<span class="k">回収可能価額</span>まで切り下げ<span class="k">減損損失（特別損失）</span>を計上。回収可能価額＝<span class="k">正味売却価額と使用価値の高い方</span>。</dd></div>
+<div><dt>無形固定資産</dt><dd>のれん・ソフトウェア・特許権など。残存価額ゼロで償却が基本。</dd></div>
+<div><dt>研究開発費</dt><dd>将来の収益が不確実なので、資産にせず<span class="k">発生時に費用処理</span>。</dd></div>
+</dl>
+
+<h3>リース・引当金・退職給付</h3>
+<dl class="terms">
+<div><dt>ファイナンス・リース</dt><dd>中途解約不能＋フルペイアウト（実質的に買ったのと同じ）。<span class="k">売買処理</span>＝リース資産・リース債務を<span class="k">B/Sに計上</span>し減価償却。</dd></div>
+<div><dt>オペレーティング・リース</dt><dd>それ以外。<span class="k">賃貸借処理</span>＝支払リース料を費用計上（資産計上しない）。</dd></div>
+<div><dt>引当金の4要件</dt><dd>①<span class="k">将来の費用・損失</span>で ②発生が<span class="k">当期以前の事象</span>に起因し ③発生の<span class="k">可能性が高く</span> ④金額を<span class="k">合理的に見積れる</span>。→貸倒引当金（資産の控除）、賞与引当金・製品保証引当金（流動負債）、退職給付引当金（固定負債）。</dd></div>
+<div><dt>退職給付（連結）</dt><dd><span class="k">退職給付債務 − 年金資産</span>＝<span class="k">退職給付に係る負債</span>。数理計算上の差異などは連結ではその他の包括利益で調整。</dd></div>
+</dl>
+
+<h3>税効果会計・外貨換算</h3>
+<dl class="terms">
+<div><dt>税効果会計</dt><dd>会計の利益と税法の所得の<span class="k">一時差異</span>を調整し、税金費用を適切に期間配分する。将来の税金が減る見込み→<span class="k">繰延税金資産</span>、増える見込み→<span class="k">繰延税金負債</span>。P/Lでは「<span class="k">法人税等調整額</span>」。</dd></div>
+<div><dt>為替換算調整勘定</dt><dd>在外子会社の財務諸表を円に換算するときに生じる差額。連結B/Sの<span class="k">その他の包括利益累計額</span>に計上。</dd></div>
+</dl>
+
+<h3>製造原価（製造業のP/L）</h3>
+<dl class="terms">
+<div><dt>原価の3要素</dt><dd><span class="k">材料費・労務費・経費</span>。製品を作るためにかかったコストは「製造原価」となり、売れた分だけ売上原価になる。</dd></div>
+<div><dt>当期総製造費用</dt><dd>当期に投入した材料費＋労務費＋経費の合計。</dd></div>
+<div><dt>当期製品製造原価</dt><dd><span class="k">期首仕掛品棚卸高 ＋ 当期総製造費用 − 期末仕掛品棚卸高</span>。製造原価明細書（報告書）で計算される。</dd></div>
+<div><dt>売上原価（製造業）</dt><dd><span class="k">期首製品棚卸高 ＋ 当期製品製造原価 − 期末製品棚卸高</span>。商業の「仕入」の代わりに「当期製品製造原価」が入る。</dd></div>
+<div><dt>減価償却費の行き先</dt><dd>工場の機械の減価償却費は<span class="k">製造原価（経費）</span>、本社の建物の分は<span class="k">販管費</span>。</dd></div>
+</dl>
+<div class="fx"><span class="eq">当期製品製造原価 ＝ <b class="k">期首仕掛品 ＋ 当期総製造費用 − 期末仕掛品</b></span></div>
+
+<h3>収益認識（5つのステップ）</h3>
+<dl class="terms">
+<div><dt>収益認識基準</dt><dd>①<span class="k">契約の識別</span> → ②<span class="k">履行義務の識別</span> → ③<span class="k">取引価格の算定</span> → ④取引価格を履行義務に<span class="k">配分</span> → ⑤履行義務を<span class="k">充足した時に（または充足するにつれて）</span>収益を認識。商品を引き渡した時点（一時点）か、サービス提供期間にわたって（一定期間）かで計上のタイミングが決まる。</dd></div>
+<div><dt>返品・値引き</dt><dd>返品が見込まれる分は収益に含めない（返金負債）。ポイントなど将来の履行義務があれば、その分は<span class="k">契約負債</span>として繰り延べる。</dd></div>
+</dl>
+
+<h3>会計方針の変更・会計上の見積り</h3>
+<dl class="terms">
+<div><dt>会計方針の変更</dt><dd>棚卸資産の評価方法を変えるなど。原則として<span class="k">遡及適用</span>（過去の財務諸表も新しい方針で作り直す）。正当な理由が必要で、変更の内容と影響を注記。</dd></div>
+<div><dt>会計上の見積りの変更</dt><dd>耐用年数の変更、引当金の見積り直しなど。過去には遡らず、<span class="k">変更した期以降（将来に向かって）</span>に反映。</dd></div>
+<div><dt>誤謬の訂正</dt><dd>過去の誤りは<span class="k">修正再表示</span>（過去の財務諸表を訂正）。</dd></div>
+</dl>
+<div class="tip">「会計方針の変更＝遡及」「見積りの変更＝将来」。耐用年数の変更は見積りの変更なので、過去の減価償却費は直さない。</div>
+<div class="memo">差額の行き先だけ整理：売買目的→P/L、その他有価証券→純資産、為替換算調整勘定→純資産、減損→特別損失。「P/Lか純資産か」を聞くのが出題者の癖。</div>
+</div>
+</details>
+<details class="ch" id="ch8" data-day="5">
+<summary><span class="num">CH 08<small>Step 9</small></span><span class="name">分析の基礎と成長性<small>百分比・趨勢・伸び率</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">ここから後半戦＝<b>財務諸表分析</b>。まず道具の使い方：<b>実数のまま比べる</b>か、<b>比率にして比べる</b>か。分析問題は「式を思い出す→数字を当てはめる→単位を確認」の3手で必ず解ける。</div>
+
+<h3>分析の道具箱</h3>
+<dl class="terms">
+<div><dt>実数分析と比率分析</dt><dd>金額そのものを比べるのが<span class="k">実数分析</span>、割り算して規模の影響を除くのが<span class="k">比率分析</span>。規模が違う会社の比較は比率で。</dd></div>
+<div><dt>百分比財務諸表</dt><dd>B/Sは<span class="k">総資産を100%</span>、P/Lは<span class="k">売上高を100%</span>として各項目を％表示。構成の変化や他社との違いが一目で分かる。</dd></div>
+<div><dt>時系列分析とクロスセクション分析</dt><dd>同じ会社の<span class="k">過去との比較</span>（時系列・趨勢分析）と、同業<span class="k">他社との比較</span>（クロスセクション）。両方やるのが基本。</dd></div>
+<div><dt>単位のクセ</dt><dd>比率は<span class="k">%</span>、回転率は<span class="k">回</span>、回転期間は<span class="k">月（または日）</span>、PER・PBRは<span class="k">倍</span>。答えの単位を先に見ると式を思い出せる。</dd></div>
+</dl>
+
+<h3>成長性の分析</h3>
+<div class="fx">
+<span class="eq">対前年度比率（%） ＝ <b class="k">当年度の数値 ÷ 前年度の数値 × 100</b></span>
+<span class="eq">伸び率（増減率）（%） ＝ <b class="k">（当年度 − 前年度）÷ 前年度 × 100</b></span>
+<span class="eq">対基準年度比率（%） ＝ <b class="k">当年度の数値 ÷ 基準年度の数値 × 100</b></span>
+</div>
+<dl class="terms">
+<div><dt>使い分け</dt><dd>対前年度比率110%＝伸び率<span class="k">10%</span>。同じことを別の言い方で聞いてくるので換算できるように。数年分の勢いを見るなら基準年度を100とした<span class="k">指数（対基準年度比率）</span>。</dd></div>
+<div><dt>見るべき組み合わせ</dt><dd>売上の伸びと<span class="k">利益の伸び</span>、そして<span class="k">総資産の伸び</span>を並べる。売上だけ伸びて利益が伸びない＝もうけの質が悪化。資産だけ膨らむ＝効率が悪化。</dd></div>
+</dl>
+<div class="memo">計算例：売上高が前年200、当年230なら、対前年度比率＝230÷200×100＝<b>115%</b>、伸び率＝30÷200×100＝<b>15%</b>。</div>
+</div>
+</details>
+
+<details class="ch" id="ch9" data-day="5">
+<summary><span class="num">CH 09<small>Step 10</small></span><span class="name">安全性の分析<small>短期・長期・資本構成</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">安全性＝<b>潰れにくさ</b>。①短期の支払能力（流動比率・当座比率・手元流動性）、②資本構成（自己資本比率・負債比率）、③長期の投資バランス（固定比率・固定長期適合率）の3グループで覚える。</div>
+
+<h3>① 短期の支払能力</h3>
+<div class="fx">
+<span class="eq">流動比率（%） ＝ <b class="k">流動資産 ÷ 流動負債 × 100</b>　（高いほど安全。200%が理想、100%割れは要注意）</span>
+<span class="eq">当座比率（%） ＝ <b class="k">当座資産 ÷ 流動負債 × 100</b>　（在庫を除いた厳しめの基準。100%が目安）</span>
+<span class="eq">手元流動性（金額） ＝ <b class="k">現金及び預金 ＋ 有価証券</b>　（投資有価証券は含めない）</span>
+<span class="eq">手元流動性比率（月） ＝ <b class="k">手元流動性 ÷ 月商（売上高÷12）</b>　（月商の何か月分か）</span>
+</div>
+<dl class="terms">
+<div><dt>当座資産</dt><dd><span class="k">現金及び預金＋売上債権（受取手形・売掛金−貸倒引当金）＋有価証券</span>。棚卸資産を含まないのが流動比率との違い。</dd></div>
+<div><dt>読み方の注意</dt><dd>流動比率が高くても、中身が<span class="k">売れない在庫</span>だらけなら安心できない→だから当座比率も見る。手元流動性は「すぐ使える資金の金額」、月商で割った手元流動性比率は「月商の何か月分か」。名前を混同しない。</dd></div>
+</dl>
+
+<h3>② 資本構成（B/Sの右側）</h3>
+<div class="fx">
+<span class="eq">自己資本比率（%） ＝ <b class="k">自己資本 ÷ 総資本 × 100</b>　（高いほど安全）</span>
+<span class="eq">負債比率（%） ＝ <b class="k">負債 ÷ 自己資本 × 100</b>　（低いほど安全。100%以下が一つの目安）</span>
+</div>
+<p class="small muted">自己資本＝純資産−（新株予約権＋非支配株主持分）。総資本＝負債＋純資産＝総資産。返さなくてよいお金（自己資本）の割合が高いほど倒れにくい。</p>
+
+<h3>③ 長期の投資バランス（B/Sの左右の対応）</h3>
+<div class="fx">
+<span class="eq">固定比率（%） ＝ <b class="k">固定資産 ÷ 自己資本 × 100</b>　（100%以下が理想：固定資産を自己資本でまかなえている）</span>
+<span class="eq">固定長期適合率（%） ＝ <b class="k">固定資産 ÷（自己資本 ＋ 固定負債）× 100</b>　（100%以下が必須ライン）</span>
+</div>
+<dl class="terms">
+<div><dt>考え方</dt><dd>工場や建物のような<span class="k">長く使う資産</span>は、<span class="k">返済が長い・不要なお金</span>（自己資本＋固定負債）で買うべき、という理屈。固定長期適合率が100%を超える＝固定資産の一部を<span class="k">短期借入で</span>買っている＝資金繰りが危うい。</dd></div>
+<div><dt>インタレスト・カバレッジ・レシオ（倍）</dt><dd><span class="k">事業利益 ÷（支払利息・社債利息）</span>。事業利益＝<span class="k">営業利益＋受取利息・受取配当金＋有価証券利息（＋連結では持分法による投資利益）</span>。利息の支払い余力で、高いほど安全。問題に社債利息・有価証券利息・持分法による投資利益が出てきたら忘れず含める。</dd></div>
+</dl>
+
+<h3>④ 2級で追加される安全性の指標（★＝公式テキスト外の参考指標）</h3>
+<div class="fx">
+<span class="eq">正味運転資本 ＝ <b class="k">流動資産 − 流動負債</b>　（プラスなら短期の支払余力）</span>
+<span class="eq">★ネットキャッシュ ＝ <b class="k">現金及び預金 ＋ 有価証券 − 有利子負債</b>　（実質無借金ならプラス）</span>
+<span class="eq">営業CF対流動負債比率（%） ＝ <b class="k">営業CF ÷ 流動負債 × 100</b>　（本業の現金で短期の支払をどれだけ賄えるか）</span>
+<span class="eq">営業キャッシュ・フロー対負債比率（%） ＝ <b class="k">営業CF ÷ 負債（合計） × 100</b>　（負債全体を本業の現金でどれだけ返せるか。分母は負債合計）</span>
+<span class="eq">★営業CF対有利子負債比率（%） ＝ <b class="k">営業CF ÷ 有利子負債 × 100</b>　（借金を本業の現金で何年で返せるかの裏返し。参考）</span>
+</div>
+<dl class="terms">
+<div><dt>有利子負債</dt><dd><span class="k">短期借入金＋社債＋長期借入金</span>（＋コマーシャル・ペーパー、リース債務など利息の付く負債）。買掛金は含まない。</dd></div>
+<div><dt>ストックとフローの安全性</dt><dd>流動比率などはB/Sだけで見る<span class="k">ストックの安全性</span>。営業CFを使う指標は「毎年入ってくる現金で払えるか」を見る<span class="k">フローの安全性</span>。両方見るのが2級。</dd></div>
+</dl>
+<div class="memo">計算例：流動資産300（うち棚卸資産120）、流動負債200 → 流動比率150%、当座比率＝(300−120)÷200＝90%。※実際の当座資産は科目を拾って計算するが、試験では「流動資産−棚卸資産」で解ける出題も多い。</div>
+<div class="tip">固定比率・負債比率は「<b>低いほど安全</b>」、流動比率・当座比率・自己資本比率は「<b>高いほど安全</b>」。向きを逆にした選択肢が定番のひっかけ。</div>
+</div>
+</details>
+
+<details class="ch" id="ch10" data-day="6">
+<summary><span class="num">CH 10<small>Step 11</small></span><span class="name">収益性・効率性の分析<small>ROA・ROE・回転率</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">収益性＝<b>もうける力</b>。頂点は<b>ROE（自己資本利益率）</b>と<b>ROA（総資本利益率）</b>。ROEを3つに分解する<b>デュポン分解</b>は2級の看板論点で、ほぼ毎回出る。</div>
+
+<h3>資本利益率（Return）</h3>
+<div class="fx">
+<span class="eq">総資本利益率 ROA（%） ＝ <b class="k">利益 ÷ 総資本 × 100</b>　（利益は営業利益・経常利益・当期純利益など問題の指定に従う）</span>
+<span class="eq">総資本事業利益率（%） ＝ <b class="k">事業利益 ÷ 総資本 × 100</b>　（事業利益＝営業利益＋受取利息・配当金＋有価証券利息＋持分法による投資利益）</span>
+<span class="eq">自己資本利益率 ROE（%） ＝ <b class="k">当期純利益 ÷ 自己資本 × 100</b>　（連結では親会社株主に帰属する当期純利益）</span>
+<span class="eq">経営資本営業利益率（%） ＝ <b class="k">営業利益 ÷ 経営資本 × 100</b></span>
+</div>
+<dl class="terms">
+<div><dt>分母は平均を使う</dt><dd>資本利益率の分母は原則<span class="k">（期首＋期末）÷2</span>の平均値。フロー（利益）とストック（資本）を対応させるため。問題文に「期末の数値による」とあればそれに従う。</dd></div>
+<div><dt>経営資本</dt><dd>本業に使っている資本＝総資本−（<span class="k">建設仮勘定・投資その他の資産・繰延資産</span>など本業に未投入の分）。営業利益と対応させる。</dd></div>
+<div><dt>ROEが大事な理由</dt><dd>株主が出したお金でどれだけ稼いだか。<span class="k">株主から見た利回り</span>で、8%〜10%が一つの注目ライン。</dd></div>
+</dl>
+
+<h3>売上高利益率（Margin）</h3>
+<div class="fx">
+<span class="eq">売上高総利益率（%） ＝ <b class="k">売上総利益 ÷ 売上高 × 100</b>　／　売上高営業利益率 ＝ <b class="k">営業利益 ÷ 売上高 × 100</b></span>
+<span class="eq">売上高経常利益率（%） ＝ <b class="k">経常利益 ÷ 売上高 × 100</b>　／　売上高当期純利益率 ＝ <b class="k">当期純利益 ÷ 売上高 × 100</b></span>
+</div>
+
+<h3>回転率・回転期間（効率）</h3>
+<div class="fx">
+<span class="eq">総資本回転率（回） ＝ <b class="k">売上高 ÷ 総資本</b>　（資産を1年に何回転させて売上にしたか）</span>
+<span class="eq">回転期間（月） ＝ <b class="k">資産 ÷ 月商（売上高÷12）</b>　（売上債権・棚卸資産・仕入債務などで使う）</span>
+</div>
+<p class="small muted">売上債権回転期間が長くなる＝回収が遅くなっている。棚卸資産回転期間が長くなる＝在庫が滞留。どちらも資金繰り悪化のサイン。</p>
+
+
+<h3>回転率・回転期間を科目別に（2級の頻出計算）</h3>
+<div class="fx">
+<span class="eq">売上債権回転率（回） ＝ <b class="k">売上高 ÷ 売上債権</b>　／　売上債権回転期間（月） ＝ <b class="k">売上債権 ÷ 月商</b></span>
+<span class="eq">棚卸資産回転率（回） ＝ <b class="k">売上高 ÷ 棚卸資産</b>　／　棚卸資産回転期間（月） ＝ <b class="k">棚卸資産 ÷ 月商</b></span>
+<span class="eq">仕入債務回転期間（月） ＝ <b class="k">仕入債務 ÷ 月商</b>　（問題の指示により月次仕入高で割ることもある）</span>
+<span class="eq">★キャッシュ・コンバージョン・サイクル CCC（月） ＝ <b class="k">売上債権回転期間 ＋ 棚卸資産回転期間 − 仕入債務回転期間</b>　（★＝公式テキスト外の参考指標）</span>
+</div>
+<dl class="terms">
+<div><dt>CCCの意味</dt><dd>仕入代金を払ってから売上代金を回収するまでの<span class="k">現金が寝ている期間</span>。短いほど資金効率が良い。回収を早め、在庫を減らし、支払を遅らせると短くなる。</dd></div>
+<div><dt>回転率と回転期間の関係</dt><dd>回転期間（月）＝12÷回転率。片方が分かればもう片方も出る。</dd></div>
+</dl>
+<h3>デュポン分解（超頻出）</h3>
+<div class="fx">
+<span class="eq">ROE ＝ <b class="k">売上高当期純利益率 × 総資本回転率 × 財務レバレッジ</b></span>
+<span class="eq">　　＝ 当期純利益/売上高 × 売上高/総資本 × <b class="k">総資本/自己資本</b></span>
+</div>
+<dl class="terms">
+<div><dt>読み方</dt><dd>ROEを上げる道は3つ：①利益率を上げる ②資産効率（回転）を上げる ③<span class="k">借入を増やす（レバレッジ）</span>。③で上がったROEは<span class="k">安全性の犠牲</span>とセット——ここまで書けると2級の記述選択問題が取れる。</dd></div>
+</dl>
+<div class="memo">計算例：当期純利益60、売上高1,200、総資本1,000、自己資本500 → 利益率5%×回転率1.2回×レバレッジ2.0倍＝<b>ROE12%</b>。掛け算した結果が 60÷500＝12% と一致することを確認。</div>
+
+<h3>1人当たり分析・規模の分析・セグメント分析</h3>
+<div class="fx">
+<span class="eq">従業員1人当たり売上高 ＝ <b class="k">売上高 ÷ 従業員数</b>　／　1人当たり営業利益 ＝ <b class="k">営業利益 ÷ 従業員数</b></span>
+<span class="eq">資本集約度 ＝ <b class="k">総資本 ÷ 従業員数</b>　／　労働装備率 ＝ <b class="k">（有形固定資産 − 建設仮勘定）÷ 従業員数</b>　（稼働中の設備だけで見る）</span>
+<span class="eq">規模倍率（連単倍率） ＝ <b class="k">連結の数値 ÷ 親会社単体の数値</b>　（売上高・総資産などで計算）</span>
+<span class="eq">セグメント資産利益率（%） ＝ <b class="k">セグメント利益 ÷ セグメント資産 × 100</b></span>
+</div>
+<dl class="terms">
+<div><dt>1人当たり分析</dt><dd>従業員1人がどれだけ売上・利益を生んでいるか（労働生産性）。資本集約度・労働装備率は「1人にどれだけ設備を持たせているか」で、高いほど装置産業型。</dd></div>
+<div><dt>規模倍率</dt><dd>連結÷単体。<span class="k">1に近いほど親会社単独の事業が中心</span>、大きいほど子会社の寄与が大きい。</dd></div>
+<div><dt>セグメント情報の分析</dt><dd>事業ごとの売上高構成比、セグメント利益率（利益÷売上高）、セグメント資産利益率で「どの事業が稼ぎ頭か、どこに資産が偏っているか」を見る。全社の数字だけでは見えない偏りが分かる。</dd></div>
+</dl>
+
+</div>
+</details>
+<details class="ch" id="ch11" data-day="6">
+<summary><span class="num">CH 11<small>Step 12</small></span><span class="name">1株当たり分析<small>EPS・BPS・PER・PBR・配当</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">株式投資の目線で会社を測る指標群。<b>EPSとBPS</b>（会社側の1株価値）に、<b>株価</b>を組み合わせるとPER・PBRになる——この構造で覚えると6つの式が2つに圧縮できる。</div>
+
+<h3>会社側の「1株当たり」</h3>
+<div class="fx">
+<span class="eq">1株当たり当期純利益 EPS（円） ＝ <b class="k">当期純利益 ÷ 発行済株式数（自己株式を除く期中平均）</b></span>
+<span class="eq">1株当たり純資産 BPS（円） ＝ <b class="k">自己資本 ÷ 期末発行済株式数（自己株式を除く）</b></span>
+</div>
+<p class="small muted">連結では分子は親会社株主に帰属する当期純利益。自己資本＝純資産−（新株予約権＋非支配株主持分）。自己株式を除くのを忘れない。</p>
+
+<h3>株価と組み合わせる</h3>
+<div class="fx">
+<span class="eq">株価収益率 PER（倍） ＝ <b class="k">株価 ÷ EPS</b>　（利益の何年分の値段か。高い＝期待が大きい/割高）</span>
+<span class="eq">株価純資産倍率 PBR（倍） ＝ <b class="k">株価 ÷ BPS</b>　（1倍割れ＝解散価値以下と評価されている）</span>
+<span class="eq">時価総額 ＝ <b class="k">株価 × 発行済株式数</b></span>
+</div>
+
+<h3>配当の指標</h3>
+<div class="fx">
+<span class="eq">配当性向（%） ＝ <b class="k">配当金総額 ÷ 当期純利益 × 100</b>　（利益のうち配当に回した割合）</span>
+<span class="eq">配当利回り（%） ＝ <b class="k">1株当たり配当額 ÷ 株価 × 100</b></span>
+</div>
+<dl class="terms">
+<div><dt>関係式で確認</dt><dd>配当性向＝1株当たり配当÷EPS×100 でも同じ。配当性向が100%超＝<span class="k">利益以上に配当</span>している（蓄積を取り崩し）。</dd></div>
+<div><dt>PERとPBRのつながり</dt><dd>PBR ＝ PER × ROE。ROEが低いままだとPBRは上がらない、という近年よく聞く話はこの式のこと。</dd></div>
+</dl>
+
+<h3>2級で追加される株価指標（★＝公式テキスト外の参考指標）</h3>
+<div class="fx">
+<span class="eq">1株当たり営業CF（円） ＝ <b class="k">営業CF ÷ 発行済株式数（自己株式を除く。EPSと同じ株式数）</b>　／　株価キャッシュ・フロー倍率 PCFR（倍） ＝ <b class="k">株価 ÷ 1株当たり営業CF</b></span>
+<span class="eq">★株主総利回り TSR（%） ＝ <b class="k">（期末株価 − 期首株価 ＋ 1株当たり配当額）÷ 期首株価 × 100</b></span>
+</div>
+<dl class="terms">
+<div><dt>PCFR</dt><dd>PERの「利益」を「営業CF」に置き換えたもの。減価償却費の大きい会社は利益より営業CFが大きく、PERとPCFRの差が広がる。</dd></div>
+<div><dt>TSR</dt><dd>値上がり益と配当を合わせた、株主にとっての1年間の<span class="k">投資リターン</span>。</dd></div>
+</dl>
+<div class="memo">計算例：当期純利益100億円、株式数1億株 → EPS100円。株価1,500円ならPER15倍。BPS1,000円ならPBR1.5倍。1株配当30円なら配当性向30%、配当利回り2%。</div>
+<div class="tip">PER・PBRの単位は「<b>倍</b>」、EPS・BPSは「<b>円</b>」、配当性向・利回りは「<b>%</b>」。単位を答えさせて式の理解を試す問題がある。</div>
+</div>
+</details>
+
+<details class="ch" id="ch12" data-day="7">
+<summary><span class="num">CH 12<small>Step 13</small></span><span class="name">損益分岐点とCFの分析<small>CVP分析・安全余裕率</small></span><span class="arrow">▼</span></summary>
+<div class="body">
+<div class="lead">損益分岐点（CVP）分析は2級の<b>計算問題の主役</b>。費用を「売上に比例する<b>変動費</b>」と「売上に関係なく出ていく<b>固定費</b>」に分け、「利益ゼロになる売上高」を求める。型は1つだけ。</div>
+
+<h3>損益分岐点の型</h3>
+<div class="fx">
+<span class="eq">変動費率 ＝ <b class="k">変動費 ÷ 売上高</b>　／　限界利益 ＝ <b class="k">売上高 − 変動費</b></span>
+<span class="eq">限界利益率 ＝ <b class="k">1 − 変動費率</b>（＝限界利益 ÷ 売上高）</span>
+<span class="eq">損益分岐点売上高 ＝ <b class="k">固定費 ÷ 限界利益率</b></span>
+<span class="eq">目標利益を出す売上高 ＝ <b class="k">（固定費 ＋ 目標利益）÷ 限界利益率</b></span>
+</div>
+<dl class="terms">
+<div><dt>変動費と固定費</dt><dd>変動費＝材料費・仕入原価・販売手数料など。固定費＝家賃・人件費・減価償却費など。売上がゼロでも固定費は出ていく。</dd></div>
+<div><dt>限界利益の意味</dt><dd>売上1円のうち<span class="k">固定費の回収と利益に回る分</span>。限界利益が固定費とちょうど同じになる売上が損益分岐点。</dd></div>
+</dl>
+
+<h3>どれだけ余裕があるか</h3>
+<div class="fx">
+<span class="eq">損益分岐点比率（%） ＝ <b class="k">損益分岐点売上高 ÷ 実際の売上高 × 100</b>　（低いほど良い）</span>
+<span class="eq">安全余裕率（経営安全率）（%） ＝ <b class="k">（売上高 − 損益分岐点売上高）÷ 売上高 × 100</b> ＝ 100% − 損益分岐点比率</span>
+</div>
+<div class="memo">計算例：売上高1,000、変動費600、固定費300 → 変動費率60%、限界利益率40%、損益分岐点売上高＝300÷0.4＝<b>750</b>。損益分岐点比率75%、安全余裕率25%。目標利益100なら（300＋100）÷0.4＝<b>1,000</b>。</div>
+<div class="tip">「固定費を<span class="k">限界利益率</span>で割る」のが型。<b>変動費で割らない・限界利益率と変動費率を取り違えない</b>。検算は「BEP売上高×限界利益率＝固定費」に戻ること。</div>
+
+<h3>キャッシュ・フローの分析（2級の頻出）</h3>
+<div class="fx">
+<span class="eq">売上高営業キャッシュ・フロー比率（営業CFマージン）（%） ＝ <b class="k">営業CF ÷ 売上高 × 100</b></span>
+<span class="eq">自己資本営業CF比率（%） ＝ <b class="k">営業CF ÷ 自己資本 × 100</b>　／　経営資本営業CF比率（%） ＝ <b class="k">営業CF ÷ 経営資本 × 100</b></span>
+<span class="eq">設備投資額対キャッシュ・フロー比率（%） ＝ <b class="k">設備投資額（有形固定資産の取得支出）÷ 営業CF × 100</b></span>
+<span class="eq">フリー・キャッシュ・フロー ＝ <b class="k">営業CF ＋ 投資CF</b>（簡便法）</span>
+</div>
+<dl class="terms">
+<div><dt>営業CFの質</dt><dd>当期純利益と営業CFを並べて見る。利益より営業CFが大きい状態が健全（減価償却費の分）。<span class="k">利益＞営業CF</span>が続くなら、売上債権や在庫に現金が化けている疑い。</dd></div>
+<div><dt>設備投資額対CF比率</dt><dd><span class="k">100%未満</span>なら営業CFの範囲内で投資できている（FCFがプラス）。100%超が続くと借入や増資に頼ることになる。</dd></div>
+<div><dt>売上高営業CF比率（営業CFマージン）</dt><dd>売上高営業利益率のCF版。利益率とCFマージンの差が大きいときは、利益の質（回収・在庫）を疑う。</dd></div>
+</dl>
+</div>
+</details>
+
+</div>
