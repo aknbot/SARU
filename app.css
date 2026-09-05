@@ -225,7 +225,8 @@ ul.b li{margin-bottom:4px}
 .nav button.on{color:var(--accent-text); background:var(--accent-soft)}
 .toast{position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:18px; font-size:14px; font-weight:700; opacity:0; pointer-events:none; transition:all .25s; z-index:40; white-space:normal; max-width:calc(100vw - 32px); width:max-content; text-align:center; line-height:1.5}
 .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
-@media (max-width:380px){ .facts{grid-template-columns:1fr} .setgrid{grid-template-columns:1fr} .brand small{display:none} .top{padding:8px 0 6px} }
+@media (max-width:380px){ .facts{grid-template-columns:1fr} .setgrid{grid-template-columns:1fr} .brand{font-size:17px} .brand small{display:none} .top{padding:8px 0 6px} .countdown{font-size:12px} .countdown b{font-size:14px} .sync{font-size:11px} }
+.view>h2:focus{outline:none}
 @media (max-height:520px){ .notes-tools{position:static} }
 @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }
 
