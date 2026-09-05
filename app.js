@@ -756,7 +756,7 @@
     const q=quiz.list[quiz.pos]; const order=orderFor(q);
     $('#quiz').innerHTML=
       '<div class="card"><div class="qhead"><span class="chip acc">'+esc(setName(quiz.key))+(quiz.retry?'（やり直し）':'')+'</span><span class="prog">'+(quiz.pos+1)+' / '+quiz.list.length+' · 正解 '+quiz.correct+'</span></div>'+
-      dsPanel(q)+(q.adv?'<span class="chip adv">発展（2級範囲）</span>':'')+
+      dsPanel(q)+(q.adv?'<span class="chip adv">'+esc(course.advLabel||'発展')+'</span>':'')+
       '<p class="qtext">'+esc(q.q)+'</p>'+
       '<ul class="choices">'+order.map((ci,i)=>'<li><button type="button" class="choice" data-ci="'+ci+'" data-l="'+LETTERS[i]+'">'+esc(q.c[ci])+'</button></li>').join('')+'</ul>'+
       '<div id="verdict" role="status" aria-live="polite" tabindex="-1"></div>'+

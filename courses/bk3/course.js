@@ -6,6 +6,7 @@ window.COURSES.bk3 = {
   theme: { accent:'#8A5A12', accentSoft:'#F6EAD3', accentText:'#7A4E0C', accentInk:'#FFFFFF',
            dark:{ accent:'#E0AB4A', accentSoft:'#3A2E17', accentText:'#F0C56E', accentInk:'#221A08' } },
   homeTitle: '今日の学習',
+  advLabel: '発展（2級範囲）',   // adv:1 の問題に付くバッジ（模試の問題Ⅰ・Ⅱからは除外される）
   factsNote: '本試験は100点満点・70点以上で合格。当コースは公式過去問題集の傾向から、正誤判定 約12問・個別問題 約13問・総合問題 約25問（計50問）を目安に模擬試験を組んでいる（回により大問数・問題数は変動）。総合問題は財務諸表の空欄推定と分析指標の計算で、ここが合否を分ける。',
   howto: [
     { t:'15分', html:'<b>ノート</b>を読む。赤シートONで、用語と<b>計算式</b>を隠して「言える」まで。' },

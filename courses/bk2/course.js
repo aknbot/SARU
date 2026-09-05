@@ -6,6 +6,7 @@ window.COURSES.bk2 = {
   theme: { accent:'#1F6B4A', accentSoft:'#E0EEE5', accentText:'#1D6244', accentInk:'#FFFFFF',
            dark:{ accent:'#7ECFA8', accentSoft:'#1C3328', accentText:'#9BDBBB', accentInk:'#0C2418' } },
   homeTitle: '今日の学習',
+  advLabel: '参考（公式テキスト外）',   // adv:1 の問題に付くバッジ（模試の問題Ⅰ・Ⅱからは除外される）
   factsNote: '本試験は100点満点・70点以上で合格。当コースは公式過去問題集の傾向から、正誤判定 約9問・個別問題 約16問（知識と計算）・総合問題 約25問（計50問）を目安に模擬試験を組んでいる（回により大問数・問題数は変動）。総合問題は連結財務諸表の資料から空欄を推定し、分析指標を計算して読み取る形式で、配点の大半を占める。',
   howto: [
     { t:'15分', html:'<b>ノート</b>を読む。赤シートONで、用語と<b>計算式</b>を隠して「言える」まで。' },
