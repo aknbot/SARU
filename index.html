@@ -106,7 +106,7 @@
     <div class="right">
       <div class="meta">
         <div class="countdown" id="countdown"></div>
-        <div class="sync" id="sync" hidden></div>
+        <button type="button" class="sync" id="sync" hidden aria-live="polite"></button>
       </div>
       <button type="button" class="avatar" id="avatar" aria-label="アカウントメニュー" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
@@ -215,7 +215,7 @@
       <h3 style="margin-top:0">バックアップ（上級者向け）</h3>
       <p class="small muted">進捗はログイン中のアカウントに自動保存されます。念のため手元に控えたい場合や、別アカウントへ移す場合に使います。</p>
       <div class="row">
-        <select id="bk-course" class="btn small" aria-label="対象コース"></select>
+        <select id="bk-course" class="sel" aria-label="対象コース"></select>
         <button class="btn small" id="bk-export" type="button">バックアップコードをコピー</button>
         <button class="btn small" id="bk-import" type="button">コードから復元</button>
         <button class="btn small" id="bk-download" type="button">JSONをダウンロード</button>
@@ -246,7 +246,7 @@
   <button type="button" data-view="sched"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2.5 2.5L16 12"/></svg>予定</button>
 </nav>
 
-<dialog class="dlg" id="dlg">
+<dialog class="dlg" id="dlg" aria-labelledby="dlg-title" aria-describedby="dlg-body">
   <h2 id="dlg-title"></h2>
   <p id="dlg-body"></p>
   <div id="dlg-slot"></div>

@@ -37,6 +37,7 @@
   const dlg=$('#dlg');
   let dlgResolve=null;
   function ask(o){
+    if(dlgResolve) closeDlg(false);
     return new Promise(res=>{
       dlgResolve=res;
       $('#dlg-title').textContent=o.title||'';
@@ -52,7 +53,8 @@
   $('#dlg-ok').addEventListener('click', ()=>closeDlg(true));
   $('#dlg-cancel').addEventListener('click', ()=>closeDlg(false));
   dlg.addEventListener('cancel', e=>{ e.preventDefault(); closeDlg(false); });
-  dlg.addEventListener('click', e=>{ if(e.target===dlg) closeDlg(false); });
+  dlg.addEventListener('click', e=>{ if(e.target!==dlg) return; const r=dlg.getBoundingClientRect(); if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom) closeDlg(false); });
+  window.addEventListener('pageshow', e=>{ if(e.persisted){ gateReady(); const l=$('#gate-login-label'); if(l) l.textContent='Googleでログインして始める'; } });
 
   /* =================== 認証（Supabase / Google） =================== */
   let sb=null, user=null;
@@ -62,7 +64,7 @@
   const RM = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches:false };
   function gated(){ return REQUIRE_LOGIN && !user; }
   function uid(){ return user ? user.id : 'local'; }
-  function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=false; }
+  function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=false; el.disabled=!(cls==='err'||cls==='pend'||cls==='ok'); }
   function syncLabel(){
     if(!navigator.onLine) return ['offline','オフライン · 端末に保存中'];
     if(sb&&user) return ['ok','同期済み'];
@@ -103,9 +105,10 @@
       if(user) cacheUser(user);
       if(!user && error && (!navigator.onLine || error.name==='AuthRetryableFetchError')){ const cached=readCachedUser(); if(cached){ user=cached; offlineSession=true; } }
       sb.auth.onAuthStateChange((ev, session)=>{
+        if(ev==='INITIAL_SESSION' && !session && offlineSession) return;
         if(session && session.user){ cacheUser(session.user); offlineSession=false; }
         const was = user && user.id; user = session ? session.user : null;
-        if(!user && was && ev==='SIGNED_OUT' && !manualLogout){ gateStatus('セッションの有効期限が切れました。もう一度ログインしてください。', true); }
+        if(!user && was && ev==='SIGNED_OUT' && !manualLogout){ gateStatus('ログアウトされました。続けるにはもう一度ログインしてください。', true); }
         if(user && user.id!==was){ onUserChanged(); }
         if(!user && was){ resetCourseState(); started=false; }
         renderAccount(); updateGate();
@@ -132,14 +135,14 @@
   async function logout(){
     if(!sb) return;
     manualLogout=true;
-    clearTimeout(saveT); await pushNow();
+    clearTimeout(saveT); saveT=null; for(const cid of Object.keys(pendingRows)){ await pushNow(cid, pendingRows[cid]); }
     await sb.auth.signOut({ scope:'local' });
     manualLogout=false;
     try{ localStorage.removeItem('kn_user'); }catch(e){}
     user=null; resetCourseState(); started=false; renderAccount(); updateGate(); gateStatus('ログアウトしました。');
     location.hash='#/';
   }
-  function resetCourseState(){ abortExam(); course=null; lastCourseId=null; mem={}; quiz.active=false; pick.key=null; closeMenu(); }
+  function resetCourseState(){ abortExam(); clearTimeout(saveT); saveT=null; pendingPush=false; failN=0; pendingRows={}; course=null; lastCourseId=null; mem={}; quiz.active=false; pick.key=null; closeMenu(); }
   async function onUserChanged(){
     resetCourseState();
     migrateLegacyLocal();
@@ -166,23 +169,26 @@
   $('#menu-logout').addEventListener('click', async()=>{ closeMenu(); if(await ask({title:'ログアウトしますか？', body:'進捗はアカウントに保存済みです。次回ログインすると続きから再開できます。', ok:'ログアウト'})) logout(); });
 
   /* =================== 進捗ストア（ユーザー × コース） =================== */
-  const KEYS=['applied','sheet','sched','wrong','cleared','best','plan'];
+  const KEYS=['applied','sheet','sched','unsched','wrong','cleared','best','plan','resetAt'];
   let course=null, mem={}, saveT=null;
   function lsKey(cid){ return 'kn2_'+uid()+'_'+(cid||course.id); }
   function sanitize(o){
     const s={ v:2 };
     if(!o||typeof o!=='object') return s;
     s.applied=!!o.applied; s.sheet=!!o.sheet;
-    s.sched={}; if(o.sched&&typeof o.sched==='object') Object.keys(o.sched).forEach(k=>{ if(/^\d+$/.test(k) && o.sched[k]) s.sched[k]=true; });
+    s.sched={}; if(o.sched&&typeof o.sched==='object') Object.keys(o.sched).forEach(k=>{ if(/^\d+$/.test(k) && o.sched[k]) s.sched[k]=(typeof o.sched[k]==='number'&&o.sched[k]>1)?Math.floor(o.sched[k]):1; });
+    s.unsched={}; if(o.unsched&&typeof o.unsched==='object') Object.keys(o.unsched).forEach(k=>{ if(/^\d+$/.test(k) && num(o.unsched[k])>0) s.unsched[k]=Math.floor(num(o.unsched[k])); });
     s.wrong={}; s.cleared={};
     const idOk = id => typeof id==='string' && /^[a-z0-9_-]+-[0-9a-f]{8}$/.test(id);
     if(Array.isArray(o.wrong)){ /* v1: 数値index配列 → 後で移行 */ s._legacyWrong=o.wrong.filter(x=>Number.isInteger(x)&&x>=0); }
+    if(Array.isArray(o._legacyWrong)) s._legacyWrong=(s._legacyWrong||[]).concat(o._legacyWrong.filter(x=>Number.isInteger(x)&&x>=0));
     else if(o.wrong&&typeof o.wrong==='object') Object.keys(o.wrong).forEach(id=>{ if(idOk(id)) s.wrong[id]=num(o.wrong[id],1); });
     if(o.cleared&&typeof o.cleared==='object') Object.keys(o.cleared).forEach(id=>{ if(idOk(id)) s.cleared[id]=num(o.cleared[id],1); });
     s.best={}; if(o.best&&typeof o.best==='object') Object.keys(o.best).forEach(k=>{ const b=o.best[k]; if(!b||typeof b!=='object') return; if(!/^(\d+|exam)$/.test(k)) return; const p=Math.max(0,Math.min(100,Math.round(num(b.p)))); const c=Math.max(0,Math.round(num(b.c))), t=Math.max(0,Math.round(num(b.t))); const e={p,c,t}; if(typeof b.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(b.date)) e.date=b.date; s.best[k]=e; });
     if(o.plan&&typeof o.plan==='object'){ const r=num(o.plan.round), st=String(o.plan.start||''); if(r&&/^\d{4}-\d{2}-\d{2}$/.test(st)) s.plan={round:r,start:st,at:num(o.plan.at)}; }
     s.done=num(o.done); s.total=num(o.total);
-    s.updatedAt=num(o.updatedAt);
+    const clamp=v=>Math.floor(Math.max(0, Math.min(num(v), 8.64e15)));
+    s.updatedAt=clamp(o.updatedAt); if(num(o.resetAt)>0) s.resetAt=clamp(o.resetAt);
     return s;
   }
   function readLocal(cid){ try{ const v=localStorage.getItem(lsKey(cid)); return sanitize(v?JSON.parse(v):{}); }catch(e){ return sanitize({}); } }
@@ -201,14 +207,20 @@
   /* キー単位マージ：両方の変更を残す */
   function merge(a, b){
     a=sanitize(a); b=sanitize(b);
+    /* リセット・復元は resetAt で表現し、それより古い側の学習記録は捨てる */
+    const R=Math.max(a.resetAt||0, b.resetAt||0);
+    if(R){ if((a.updatedAt||0)<R) a=sanitize({ plan:a.plan, sheet:a.sheet, updatedAt:a.updatedAt, _legacyWrong:a._legacyWrong }); if((b.updatedAt||0)<R) b=sanitize({ plan:b.plan, sheet:b.sheet, updatedAt:b.updatedAt, _legacyWrong:b._legacyWrong }); }
     const newer = (a.updatedAt||0)>=(b.updatedAt||0) ? a : b;
-    const m={ v:2, applied:a.applied||b.applied, sheet:newer.sheet, sched:Object.assign({},a.sched,b.sched), wrong:{}, cleared:{}, best:{}, plan:null };
+    const m={ v:2, applied:newer.applied, sheet:newer.sheet, sched:{}, unsched:{}, wrong:{}, cleared:{}, best:{}, plan:null };
+    if(R) m.resetAt=R;
+    /* 完了チェックは「チェックした時刻」と「外した時刻」の新しい方を採用 */
+    new Set([...Object.keys(a.sched),...Object.keys(b.sched),...Object.keys(a.unsched),...Object.keys(b.unsched)]).forEach(n=>{ const on=Math.max(a.sched[n]||0,b.sched[n]||0), off=Math.max(a.unsched[n]||0,b.unsched[n]||0); if(on>=off && on) m.sched[n]=on; if(off) m.unsched[n]=off; });
     const ids=new Set([...Object.keys(a.wrong),...Object.keys(b.wrong),...Object.keys(a.cleared),...Object.keys(b.cleared)]);
     ids.forEach(id=>{ const w=Math.max(a.wrong[id]||0,b.wrong[id]||0), c=Math.max(a.cleared[id]||0,b.cleared[id]||0); if(w>c) m.wrong[id]=w; if(c) m.cleared[id]=c; });
     new Set([...Object.keys(a.best),...Object.keys(b.best)]).forEach(k=>{ const x=a.best[k], y=b.best[k]; m.best[k] = (!y||(x&&x.p>=y.p)) ? x : y; });
     const pa=a.plan, pb=b.plan; m.plan = (pa&&pb) ? ((pa.at||0)>=(pb.at||0)?pa:pb) : (pa||pb||null);
     /* 受験する回を切り替えた側があれば、その側の完了チェック・申込状況を採用する（古い回のチェックが復活しないように） */
-    if(pa&&pb&&pa.round!==pb.round){ const src=(m.plan===pa)?a:b; m.sched=Object.assign({},src.sched); m.applied=!!src.applied; }
+    if(pa&&pb&&pa.round!==pb.round){ const src=(m.plan===pa)?a:b; m.sched=Object.assign({},src.sched); m.unsched=Object.assign({},src.unsched); m.applied=!!src.applied; }
     if(!m.plan) delete m.plan;
     if(a._legacyWrong) m._legacyWrong=a._legacyWrong; if(b._legacyWrong) m._legacyWrong=(m._legacyWrong||[]).concat(b._legacyWrong);
     m.done=Math.max(a.done,b.done); m.total=Math.max(a.total,b.total);
@@ -217,35 +229,39 @@
   }
   const store = {
     get(k, d){ return (mem[k]!==undefined && mem[k]!==null) ? mem[k] : d; },
-    set(k, v){ mem[k]=v; mem.updatedAt=Date.now(); writeLocal(); schedulePush(); }
+    set(k, v){ mem[k]=v; touch(); }
   };
-  function touch(){ mem.updatedAt=Date.now(); writeLocal(); schedulePush(); }
+  function bump(){ mem.updatedAt=Math.max(Date.now(), (mem.updatedAt||0)+1); }
+  function touch(){ bump(); writeLocal(); schedulePush(); }
   function schedulePush(){
     if(!sb||!user){ const [c,t]=syncLabel(); setSync(c,t); return; }
     if(!navigator.onLine){ setSync('offline','オフライン · 端末に保存中'); pendingPush=true; return; }
-    setSync('pend','保存中…'); clearTimeout(saveT); saveT=setTimeout(pushNow, 800);
+    setSync('pend','保存中…'); clearTimeout(saveT); const cid=course.id, st=mem, owner=user.id; pendingRows[cid]=st; saveT=setTimeout(()=>pushNow(cid, st, owner), 800);
   }
-  let pendingPush=false, pushing=false, failN=0;
+  let pendingPush=false, pushing=false, failN=0, pendingRows={};
   const isAuthErr = e => e && (e.status===401 || e.code==='PGRST301' || /JWT/i.test(e.message||''));
   $('#sync').addEventListener('click', ()=>{ if(!sb||!user||!course) return; failN=0; if(pendingPush||saveT) pushNow(); else pullProgress(); });
   function rowOf(cid, state){ const s=Object.assign({},state); delete s._legacyWrong; return { user_id:user.id, course_id:cid, state:s, updated_at:new Date().toISOString() }; }
-  async function pushNow(cid, state){
+  async function pushNow(cid, state, owner){
     if(!sb||!user) return;
     cid=cid||(course&&course.id); state=state||mem; if(!cid) return;
+    owner=owner||user.id; if(user.id!==owner) return;
     clearTimeout(saveT); saveT=null;
-    if(!navigator.onLine){ pendingPush=true; if(course&&cid===course.id) setSync('offline','オフライン · 端末に保存中'); return; }
+    if(!navigator.onLine){ pendingRows[cid]=state; pendingPush=true; if(course&&cid===course.id) setSync('offline','オフライン · 端末に保存中'); return; }
     try{
       pushing=true;
       const { error } = await sb.from('progress').upsert(rowOf(cid,state), { onConflict:'user_id,course_id' });
       if(error) throw error;
-      pendingPush=false; failN=0;
+      if(pendingRows[cid]===state) delete pendingRows[cid];
+      pendingPush=Object.keys(pendingRows).length>0; failN=0;
       if(course&&cid===course.id) setSync('ok','同期済み');
     }catch(e){
-      pendingPush=true; failN++;
-      if(isAuthErr(e) && failN===1){ try{ const r=await sb.auth.refreshSession(); if(!r.error){ pushing=false; return pushNow(cid, state); } }catch(_){} }
+      pendingRows[cid]=state; pendingPush=true; failN++;
+      if(/stale/i.test(e.message||'') || e.code==='P0001'){ /* サーバーにより新しい state がある → 取り込んでから送り直す */ if(course&&cid===course.id){ pushing=false; failN=0; delete pendingRows[cid]; return pullProgress(); } }
+      if(isAuthErr(e) && failN===1){ try{ const r=await sb.auth.refreshSession(); if(!r.error){ pushing=false; return pushNow(cid, state, owner); } }catch(_){} }
       if(course&&cid===course.id) setSync('err', failN>=5 ? '保存できません · タップで再試行' : '再保存待ち…');
       if(failN>=5){ toast('進捗を保存できませんでした。通信環境をご確認ください。'); }
-      else { clearTimeout(saveT); saveT=setTimeout(()=>pushNow(cid, state), Math.min(60000, 4000*Math.pow(2, failN))); }
+      else { clearTimeout(saveT); saveT=setTimeout(()=>pushNow(cid, state, owner), Math.min(60000, 4000*Math.pow(2, failN))); }
     }
     finally{ pushing=false; }
   }
@@ -283,20 +299,20 @@
   }
   /* 離脱時の確実な送信 */
   function flushBeacon(){
-    if(!sb||!user||!course) return;
-    if(!saveT && !pendingPush) return;
+    if(!sb||!user) return;
+    const rows=Object.keys(pendingRows); if(!saveT && !rows.length) return;
     clearTimeout(saveT); saveT=null;
     try{
-      const tokenP = sb.auth.getSession();
-      tokenP.then(({data})=>{
-        const tok=data&&data.session&&data.session.access_token; if(!tok) return;
-        fetch(SITE.supabaseUrl+'/rest/v1/progress?on_conflict=user_id,course_id', { method:'POST', keepalive:true, headers:{ apikey:SITE.supabaseAnonKey, Authorization:'Bearer '+tok, 'Content-Type':'application/json', Prefer:'resolution=merge-duplicates' }, body:JSON.stringify(rowOf(course.id, mem)) }).catch(()=>{});
+      const owner=user.id;
+      sb.auth.getSession().then(({data})=>{
+        const tok=data&&data.session&&data.session.access_token; if(!tok||!user||user.id!==owner) return;
+        rows.forEach(cid=>{ const st=pendingRows[cid]; if(!st) return; fetch(SITE.supabaseUrl+'/rest/v1/progress?on_conflict=user_id,course_id', { method:'POST', keepalive:true, headers:{ apikey:SITE.supabaseAnonKey, Authorization:'Bearer '+tok, 'Content-Type':'application/json', Prefer:'resolution=merge-duplicates' }, body:JSON.stringify(rowOf(cid, st)) }).catch(()=>{}); });
       });
     }catch(e){}
   }
   window.addEventListener('pagehide', flushBeacon);
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden') flushBeacon(); else { checkDayRollover(); if(course && sb && user && navigator.onLine) pullProgress(); } });
-  window.addEventListener('online', ()=>{ if(course){ schedulePush(); } else { const [c,t]=syncLabel(); if(course) setSync(c,t); } });
+  window.addEventListener('online', ()=>{ failN=0; const rows=Object.keys(pendingRows); if(rows.length && sb && user){ rows.forEach(cid=>pushNow(cid, pendingRows[cid])); } else if(course){ const [c,t]=syncLabel(); setSync(c,t); } });
   window.addEventListener('offline', ()=>{ if(course) setSync('offline','オフライン · 端末に保存中'); });
 
   /* =================== 試験回・学習予定 =================== */
@@ -491,7 +507,7 @@
     const ex=p.exam;
     const planForm='<div class="plan-form">'+
       '<label>受験する回<select id="plan-round">'+examsFor(c.id).map(e=>'<option value="'+e.round+'"'+(e.round===p.round?' selected':'')+'>第'+e.round+'回 · '+jpDateY(e.date)+(e.date<todayStr()?'（終了）':'')+'</option>').join('')+'</select></label>'+
-      '<label>学習の開始日<input type="date" id="plan-start" value="'+esc(mem.plan.start)+'"></label>'+
+      '<label>学習の開始日<input type="date" id="plan-start" value="'+esc(mem.plan.start)+'" max="'+esc(p.examDate)+'"></label>'+
       '<div class="row"><button type="button" class="btn primary small" id="plan-apply">この設定で予定を組み直す</button><span class="small muted">'+(p.compressed?'試験までの日数が標準（'+p.templateDays+'日）より短いため、圧縮した予定です。':'標準 '+p.templateDays+'日の予定を、試験日に合わせて配分しています。')+'</span></div></div>';
     $('#sched-info').innerHTML=
       '<details class="info" id="plan-details"><summary>受験する回・開始日を変更</summary><div class="body">'+planForm+'</div></details>'+
@@ -500,6 +516,7 @@
       '<details class="info"><summary>当日の動き方</summary><div class="body"><ul class="b small">'+(c.examDay||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul></div></details>';
     $('#plan-apply').addEventListener('click', ()=>{
       const round=Number($('#plan-round').value); const start=$('#plan-start').value||todayStr();
+      const exd=(examByRound(c.id, round)||{}).date; if(exd && start>exd){ toast('開始日は試験日（'+jpDate(exd)+'）より前にしてください。'); return; }
       mem.plan={round, start, at:Date.now()}; touch(); ensurePlan(); homeStep=todayIndex(); rerenderAll(); toast('予定を組み直しました。');
     });
     $('#sched-note').textContent=(p.exam?jpDate(p.start)+'から第'+p.exam.round+'回（'+jpDate(p.examDate)+'）まで、':'')+STEPS().length+'ステップ。終わったステップはチェックを入れる。遅れたら次のステップに進まず、今のステップを縮めて追いつく。';
@@ -516,8 +533,12 @@
     if(!ex){ el.innerHTML=''; return; }
     const later=examsFor(course.id).find(e=>e.date>ex.date);
     let html='';
+    const notOpen = ex.applyFrom && t<ex.applyFrom;
     if(applied){
-      if(ex.ticket && t>=addDays(ex.ticket,-7) && t<=ex.date) html='<div class="card"><p class="eyebrow">受験票</p><p style="margin:0" class="small">受験票は '+jpDate(ex.ticket)+' 発送予定。'+(ex.ticketAsk?'届かない場合は '+md(ex.ticketAsk[0])+'・'+md(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')+'</p></div>';
+      if(ex.ticket && t>=addDays(ex.ticket,-7) && t<=ex.date) html='<div class="card"><p class="eyebrow">受験票</p><p style="margin:0" class="small">受験票は '+jpDate(ex.ticket)+' 発送予定。'+(ex.ticketAsk?'届かない場合は '+md(ex.ticketAsk[0])+'・'+md(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')+'</p><label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> 第'+ex.round+'回 申込済み</label></div>';
+      else if(t<=ex.date) html='<div class="card"><p class="eyebrow">申込</p><label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> 第'+ex.round+'回 申込済み</label><p class="small muted" style="margin:6px 0 0">チェックを外すと締切の案内を再表示します。</p></div>';
+    } else if(notOpen){
+      html='<div class="card"><p class="eyebrow">申込</p><p class="small" style="margin:0">第'+ex.round+'回の申込受付は '+jpDate(ex.applyFrom)+' から。締切は '+md(ex.apply.conv)+'（コンビニ）／'+md(ex.apply.card)+'（クレカ）。受付が始まったらここに案内が出ます。</p></div>';
     } else if(t<=ex.apply.card){
       const closedConv = t>ex.apply.conv;
       html='<div class="card warn"><p class="eyebrow" style="color:var(--warn-text)">まず申込</p><p style="margin:0"><b>第'+ex.round+'回の申込締切：'+jpDate(ex.apply.conv)+'＝コンビニ払い ／ '+jpDate(ex.apply.card)+'＝クレジットカード払い。</b>'+(closedConv?'コンビニ払いは受付終了。クレジットカード払いのみ受付中。':'')+'公式サイト（<a href="https://www.b-accounting.jp/" target="_blank" rel="noopener">b-accounting.jp</a>）の「受験申込」から申し込む。'+(LEVELS[course.id]&&LEVELS[course.id].fee?'受験料 '+LEVELS[course.id].fee.toLocaleString()+'円（税込）。':'')+'</p><label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" style="width:20px;height:20px;accent-color:var(--warn)"> 申込済み</label></div>';
@@ -528,8 +549,10 @@
     const ap=$('#applied'); if(ap) ap.addEventListener('change', e=>{ store.set('applied', e.target.checked); toast(e.target.checked?'申込済みとして記録しました。':'未申込に戻しました。'); renderHome(); });
     const sw=$('#switch-round'); if(sw) sw.addEventListener('click', ()=>switchRound(Number(sw.dataset.round)));
   }
-  function switchRound(round){
-    mem.plan={round, start:todayStr(), at:Date.now()}; mem.sched={}; mem.applied=false; touch(); ensurePlan(); homeStep=todayIndex(); rerenderAll(); toast('第'+round+'回に向けた予定に切り替えました。');
+  async function switchRound(round){
+    if(!(await ask({title:'第'+round+'回の予定に切り替えますか？', body:'今の回の完了チェックと申込状況はリセットされます（正答率・復習リストは残ります）。', ok:'切り替える', danger:true}))) return;
+    const now=Date.now(); const u=Object.assign({},store.get('unsched',{})); Object.keys(store.get('sched',{})).forEach(n=>{ u[n]=now; });
+    mem.plan={round, start:todayStr(), at:now}; mem.sched={}; mem.unsched=u; mem.applied=false; touch(); ensurePlan(); homeStep=todayIndex(); rerenderAll(); toast('第'+round+'回に向けた予定に切り替えました。');
   }
   function renderPlanNotice(){
     const el=$('#plan-notice'); const p=course.plan; const t=todayStr();
@@ -546,7 +569,7 @@
   function renderHome(){
     const c=course, S=STEPS();
     renderPlanNotice(); renderDeadline();
-    const d=S[Math.min(homeStep,S.length-1)]; const checks=store.get('sched',{}); const isNow=S[todayIndex()].n===d.n;
+    const d=S[Math.min(homeStep,S.length-1)]; const checks=store.get('sched',{}); const startedPlan=todayStr()>=S[0].s; const isNow=startedPlan && S[todayIndex()].n===d.n;
     let steps='';
     if(d.read.length) steps+='<li><span class="t">15分</span><span>ノートを読む：'+d.read.map(id=>'<a href="#" data-ch="'+id+'">'+esc(chapterTitle(id))+'</a>').join('、')+'</span><span><button class="btn small primary" data-ch="'+d.read[0]+'">開く</button></span></li>';
     if(d.set==='mix'){
@@ -560,21 +583,21 @@
       steps+='<li><span class="t">10分</span><span>問題セット '+esc(d.set)+' を10問'+(b?'<span class="chip '+(b.p>=80?'ok':b.p<70?'aka':'')+'" style="margin-left:6px">'+b.p+'%</span>':'')+'</span><span><button class="btn small primary" data-set="'+esc(d.set)+'">解く</button></span></li>';
       steps+='<li><span class="t">5分</span><span>間違えた問題の解説を読み直す</span><span><button class="btn small" data-set="wrong">復習</button></span></li>';
     }
-    const flag = (d.n===S[0].n && !store.get('applied',false) && c.plan.exam && todayStr()<=c.plan.exam.apply.card) ? '<span class="chip warn">まず申込</span>' : '';
+    const exx=c.plan.exam; const flag = (d.n===S[0].n && !store.get('applied',false) && exx && todayStr()<=exx.apply.card && !(exx.applyFrom && todayStr()<exx.applyFrom)) ? '<span class="chip warn">まず申込</span>' : '';
     $('#today-card').innerHTML=
       '<div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="daynum">STEP '+String(d.n).padStart(2,'0')+' · '+range(d)+(isNow?' · 今ここ':'')+'</span>'+
       '<span class="row" style="gap:4px"><button class="btn small ghost icon" id="day-prev" aria-label="前のステップ" '+(homeStep===0?'disabled':'')+'><span aria-hidden="true">‹</span></button><button class="btn small ghost icon" id="day-next" aria-label="次のステップ" '+(homeStep===S.length-1?'disabled':'')+'><span aria-hidden="true">›</span></button></span></div>'+
       '<h2 style="font-size:20px;margin-bottom:4px">'+esc(d.title)+(flag?' '+flag:'')+(d.exam?' <span class="chip aka">本番</span>':'')+'</h2>'+
       '<p class="small muted" style="margin:0">'+esc(d.desc)+'</p><ol class="steps">'+steps+'</ol>'+
       '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:700;cursor:pointer"><input type="checkbox" id="today-done" style="width:20px;height:20px;accent-color:var(--accent)" '+(checks[d.n]?'checked':'')+'> このステップを完了にする</label>';
-    $('#day-prev').onclick=()=>{ homeStep=Math.max(0,homeStep-1); renderHome(); };
-    $('#day-next').onclick=()=>{ homeStep=Math.min(S.length-1,homeStep+1); renderHome(); };
+    $('#day-prev').onclick=()=>{ homeStep=Math.max(0,homeStep-1); renderHome(); const b=$('#day-prev'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-next').focus({preventScroll:true}); };
+    $('#day-next').onclick=()=>{ homeStep=Math.min(S.length-1,homeStep+1); renderHome(); const b=$('#day-next'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-prev').focus({preventScroll:true}); };
     $('#today-done').onchange=e=>{ setStepDone(d.n, e.target.checked); if(e.target.checked) toast('STEP '+d.n+' 完了！この調子です。'); };
     const showExamDay = daysUntil(c.plan.examDate)<=7 && daysUntil(c.plan.examDate)>=0;
     $('#examday-card').hidden=!showExamDay;
     renderProgress();
   }
-  function setStepDone(n, done){ const c2=store.get('sched',{}); if(done) c2[n]=true; else delete c2[n]; store.set('sched',c2); renderHome(); renderSched(); }
+  function setStepDone(n, done){ const c2=Object.assign({},store.get('sched',{})); const u=Object.assign({},store.get('unsched',{})); const now=Date.now(); if(done){ c2[n]=now; delete u[n]; } else { delete c2[n]; u[n]=now; } mem.sched=c2; mem.unsched=u; touch(); const fid=document.activeElement&&document.activeElement.id; const fday=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.day; renderHome(); renderSched(); if(fday){ const el=$('#sched input[data-day="'+fday+'"]'); if(el) el.focus({preventScroll:true}); } else if(fid){ const el=$('#'+fid); if(el) el.focus({preventScroll:true}); } }
   function renderProgress(){
     const S=STEPS(); const checks=store.get('sched',{}); const done=S.filter(d=>checks[d.n]).length;
     if(mem.done!==done || mem.total!==S.length){ mem.done=done; mem.total=S.length; writeLocal(); }
@@ -585,11 +608,13 @@
   }
   function renderSched(){
     renderSchedInfo();
-    const S=STEPS(); const checks=store.get('sched',{}); const ti=todayIndex();
+    const S=STEPS(); const checks=store.get('sched',{}); const ti=todayStr()<S[0].s ? -1 : todayIndex();
+    const openIds=$$('#sched-info details[open]').map(d=>d.id).filter(Boolean);
     $('#sched').innerHTML=S.map((d,i)=>{
       const links=d.read.map(id=>'<button class="btn small" data-ch="'+id+'">'+esc(chapterTitle(id))+'</button>').join('')+(d.set?'<button class="btn small primary" data-set="'+esc(d.set)+'">'+(d.set==='mix'?'総合ランダム':d.set==='wrong'?'復習リスト':'問題セット '+d.set)+'</button>':'');
       return '<li class="day'+(i===ti?' now':'')+(d.exam?' exam':'')+(checks[d.n]?' done':'')+'"><div class="date"><span>'+Number(d.s.slice(5,7))+'月</span><b>'+Number(d.s.slice(8))+'</b><span>'+(d.s===d.e?'':'〜'+md(d.e))+'</span></div><div><p class="ttl">STEP '+d.n+' · '+esc(d.title)+(d.exam?' <span class="chip aka">本番</span>':'')+(i===ti?' <span class="chip acc">今ここ</span>':'')+'</p><p class="dsc">'+esc(d.desc)+'</p><div class="links">'+links+'</div><label><input type="checkbox" data-day="'+d.n+'" aria-label="STEP '+d.n+' '+esc(d.title)+' を完了にする" '+(checks[d.n]?'checked':'')+'> 完了</label></div></li>';
     }).join('');
+    openIds.forEach(id=>{ const d=$('#'+id); if(d) d.open=true; });
     $$('#sched input[type=checkbox]').forEach(cb=>cb.addEventListener('change', e=>setStepDone(e.target.dataset.day, e.target.checked)));
   }
   document.addEventListener('click', async e=>{
@@ -700,7 +725,7 @@
     renderExamQ();
   }
   function orderFor(q){ const o=q.c.map((_,i)=>i); return q.f?o:shuffle(o); }
-  function tick(){ if(!exam.active) return; const el=$('#exam-timer'); const left=Math.max(0, exam.end-Date.now()); if(el){ el.textContent=fmtLeft(exam.end); el.classList.toggle('warn', left<10*60000); } [10,5,1].forEach(m=>{ if(left<=m*60000 && left>0 && !warned[m]){ warned[m]=true; toast('残り'+m+'分です。'); } }); if(left<=0){ clearInterval(exam.timer); toast('時間切れです。採点します。'); finishExam(); } }
+  function tick(){ if(!exam.active) return; const el=$('#exam-timer'); const left=Math.max(0, exam.end-Date.now()); if(el){ el.textContent=fmtLeft(exam.end); el.classList.toggle('warn', left<10*60000); } [10,5,1].forEach(m=>{ if(left<=m*60000 && left>0 && !warned[m]){ warned[m]=true; toast('残り'+m+'分です。'); } }); if(left<=0){ clearInterval(exam.timer); if(dlgResolve) closeDlg(false); toast('時間切れです。採点します。'); finishExam(); } }
   function secName(i){ return i<exam.sec.tf?'Ⅰ 正誤判定':i<exam.sec.tf+exam.sec.single?'Ⅱ 個別問題':'Ⅲ 総合問題'; }
   function renderExamQ(){
     if(!exam.active) return;
@@ -720,8 +745,8 @@
     $('#ex-prev').addEventListener('click', ()=>{ exam.pos--; saveExam(); renderExamQ(); });
     $('#ex-next').addEventListener('click', ()=>{ exam.pos++; saveExam(); renderExamQ(); });
     $$('#ex-grid button').forEach(b=>b.addEventListener('click', ()=>{ exam.pos=Number(b.dataset.go); saveExam(); renderExamQ(); }));
-    $('#ex-quit').addEventListener('click', async()=>{ if(await ask({title:'模試を中断しますか？', body:'解答内容は保存され、「問題」タブから再開できます（残り時間は進み続けます）。', ok:'中断する'})){ saveExam(); abortExam(); quiz.active=false; renderSetPicker(); } });
-    $('#ex-finish').addEventListener('click', async()=>{ const left=exam.list.length-exam.ans.filter(a=>a!==null).length; if(left>0 && !(await ask({title:'未解答が '+left+' 問あります', body:'未解答は不正解として採点されます。このまま採点しますか？', ok:'採点する'}))) return; finishExam(); });
+    $('#ex-quit').addEventListener('click', async()=>{ const ok=await ask({title:'模試を中断しますか？', body:'解答内容は保存され、「問題」タブから再開できます（残り時間は進み続けます）。', ok:'中断する'}); if(!exam.active) return; if(ok){ saveExam(); abortExam(); quiz.active=false; renderSetPicker(); } });
+    $('#ex-finish').addEventListener('click', async()=>{ const left=exam.list.length-exam.ans.filter(a=>a!==null).length; if(left>0){ const ok=await ask({title:'未解答が '+left+' 問あります', body:'未解答は不正解として採点されます。このまま採点しますか？', ok:'採点する'}); if(!exam.active || !ok) return; } if(exam.active) finishExam(); });
   }
   function finishExam(){
     clearInterval(exam.timer); exam.timer=null; exam.active=false; quiz.active=false; clearSavedExam();
@@ -828,7 +853,7 @@
       slot:'<textarea id="bk-in" rows="4" placeholder="KN-'+esc(cid)+'-…" aria-label="バックアップコード"></textarea><p class="small muted" id="bk-preview" style="margin:8px 0 0"></p>',
       onOpen:()=>{ const ta=$('#bk-in'); const pv=$('#bk-preview'); ta.addEventListener('input', ()=>{ try{ const r=decodeState(ta.value); if(r.course!==cid){ pv.textContent='このコードは「'+((LIST.find(c=>c.id===r.course)||{}).title||r.course)+'」用です。'; parsed=null; $('#dlg-ok').disabled=true; return; } parsed=r.state; pv.textContent='読み込む内容：'+summarize(r.state); $('#dlg-ok').disabled=false; }catch(e){ parsed=null; pv.textContent=ta.value.trim()?'コードを読み取れません。':''; $('#dlg-ok').disabled=true; } }); setTimeout(()=>ta.focus(),50); } });
     if(!ok||!parsed) return;
-    parsed.updatedAt=Date.now(); writeLocal(cid, parsed);
+    parsed.updatedAt=Date.now(); parsed.resetAt=parsed.updatedAt; writeLocal(cid, parsed);
     if(course&&course.id===cid){ mem=parsed; migrateLegacyIds(); rerenderAll(); }
     if(sb&&user) await pushNow(cid, parsed);
     renderIndex(); toast('進捗を復元しました。');
@@ -836,7 +861,7 @@
   $('#reset-course').addEventListener('click', async()=>{
     const cid=$('#bk-course').value; const meta=LIST.find(c=>c.id===cid);
     if(!(await ask({title:'進捗をリセットしますか？', body:'「'+esc(meta.title)+'」の完了チェック・正答率・復習リストを消去します。この操作は取り消せません。', ok:'リセットする', danger:true}))) return;
-    const st=readLocal(cid); const fresh=sanitize({ plan:st.plan, applied:st.applied, sheet:st.sheet }); fresh.updatedAt=Date.now(); writeLocal(cid, fresh);
+    const st=readLocal(cid); const fresh=sanitize({ plan:st.plan, applied:st.applied, sheet:st.sheet }); fresh.updatedAt=Date.now(); fresh.resetAt=fresh.updatedAt; writeLocal(cid, fresh);
     if(course&&course.id===cid){ mem=fresh; rerenderAll(); }
     if(sb&&user) await pushNow(cid, fresh);
     renderIndex(); toast('進捗をリセットしました。');
@@ -850,7 +875,7 @@
       const { error } = await sb.rpc('delete_own_account');
       if(error) throw error;
       LIST.forEach(c=>{ try{ localStorage.removeItem(lsKey(c.id)); }catch(e){} });
-      try{ localStorage.removeItem('kn_last_'+uid()); }catch(e){}
+      try{ localStorage.removeItem('kn_last_'+uid()); localStorage.removeItem('kn_user'); Object.keys(sessionStorage).filter(k=>k.indexOf('kn_exam_'+uid()+'_')===0).forEach(k=>sessionStorage.removeItem(k)); }catch(e){}
       manualLogout=true; await sb.auth.signOut(); manualLogout=false;
       user=null; resetCourseState(); started=false; renderAccount(); updateGate(); gateStatus('アカウントを削除しました。ご利用ありがとうございました。');
       location.hash='#/';

@@ -52,11 +52,13 @@ a{color:var(--accent-text)}
 
 .app{max-width:720px; margin:0 auto; padding:0 max(14px, env(safe-area-inset-right)) calc(92px + env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))}
 .top{position:sticky; top:0; z-index:20; background:var(--bg); padding:14px 0 10px; display:flex; align-items:baseline; justify-content:space-between; gap:12px; border-bottom:1px solid var(--line)}
-.brand{font-family:var(--font-display); font-weight:700; font-size:20px; letter-spacing:.02em; margin:0}
+.brand{font-family:var(--font-display); font-weight:700; font-size:20px; letter-spacing:.02em; margin:0; white-space:nowrap; flex:0 0 auto}
+.top .right{min-width:0}
+.countdown,.sync{white-space:normal}
 .brand small{font-family:var(--font-mono); font-weight:500; font-size:12px; color:var(--muted); margin-left:8px; letter-spacing:.06em}
 .countdown{font-family:var(--font-mono); font-size:13px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
 .countdown b{color:var(--aka-text); font-weight:600; font-size:16px}
-.sync{font-family:var(--font-mono); font-size:12px; letter-spacing:.04em; margin-top:2px; display:flex; align-items:center; justify-content:flex-end; gap:5px; color:var(--muted); white-space:nowrap}
+.sync{border:0; background:transparent; padding:0; font:inherit; cursor:pointer; font-family:var(--font-mono); font-size:12px; letter-spacing:.04em; margin-top:2px; display:flex; align-items:center; justify-content:flex-end; gap:5px; color:var(--muted); white-space:nowrap}
 .sync::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--line-strong); flex:0 0 auto}
 .sync.ok{color:var(--ok-text)} .sync.ok::before{background:var(--ok)}
 .sync.pend::before{background:var(--warn)}
@@ -138,7 +140,8 @@ p{margin:0 0 12px}
 .chapnav::-webkit-scrollbar{display:none}
 .chapnav a{flex:0 0 auto; text-decoration:none; font-size:12.5px; font-weight:700; padding:9px 12px; border-radius:999px; background:var(--surface); border:1px solid var(--line-strong); color:var(--ink); white-space:nowrap}
 .sheet-toggle{display:flex; align-items:center; justify-content:space-between; gap:10px}
-.switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:14px}
+.switch{display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; font-size:14px; white-space:nowrap}
+.sheet-toggle{flex-wrap:wrap}
 .switch input{width:44px; height:26px; -webkit-appearance:none; appearance:none; background:var(--muted); border-radius:999px; position:relative; transition:background .2s; cursor:pointer; margin:0}
 .switch input::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:var(--surface); transition:left .2s}
 .switch input:checked{background:var(--aka)}
@@ -332,7 +335,9 @@ dialog.dlg p{font-size:14.5px; color:var(--muted); margin:0 0 14px}
 dialog.dlg .row.end{justify-content:flex-end; margin-top:14px}
 dialog.dlg textarea{width:100%; min-height:90px; font-family:var(--font-mono); font-size:13px; padding:10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--bg); color:var(--ink); resize:vertical}
 dialog.dlg input[type=text]{width:100%; font:inherit; padding:10px; border:1px solid var(--line-strong); border-radius:8px; background:var(--bg); color:var(--ink); min-height:44px}
-.btn.danger{background:var(--aka); border-color:var(--aka); color:#fff}
+.btn.danger{background:var(--aka); border-color:var(--aka); color:var(--aka-ink)}
+.sel{font:inherit; font-size:14px; min-height:40px; padding:6px 32px 6px 12px; border:1px solid var(--line-strong); border-radius:10px; color:inherit; background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C6B62' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center/16px; -webkit-appearance:none; appearance:none; max-width:100%}
+.sync[disabled]{cursor:default}
 
 /* 進捗セル・空状態 */
 .cell{cursor:pointer; transition:border-color .12s}

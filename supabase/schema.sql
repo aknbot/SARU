@@ -48,11 +48,11 @@ create policy "progress: delete own" on public.progress
 create or replace function public.progress_guard() returns trigger
 language plpgsql as $$
 declare
-  new_ts bigint := case when jsonb_typeof(new.state->'updatedAt') = 'number' then (new.state->>'updatedAt')::bigint else 0 end;
-  old_ts bigint := case when tg_op = 'UPDATE' and jsonb_typeof(old.state->'updatedAt') = 'number' then (old.state->>'updatedAt')::bigint else 0 end;
+  new_ts numeric := case when jsonb_typeof(new.state->'updatedAt') = 'number' then (new.state->>'updatedAt')::numeric else 0 end;
+  old_ts numeric := case when tg_op = 'UPDATE' and jsonb_typeof(old.state->'updatedAt') = 'number' then (old.state->>'updatedAt')::numeric else 0 end;
 begin
   if tg_op = 'UPDATE' and new_ts < old_ts then
-    return null;   -- 古い内容は無視（クライアントには成功として返る。次回の pull でマージされる）
+    raise exception 'stale state' using errcode = 'P0001';   -- クライアントはこのエラーを受けて pull → マージ → 再送する
   end if;
   new.updated_at := now();
   return new;
