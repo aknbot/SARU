@@ -36,10 +36,10 @@ function check(name, ok, extra = '') { console.log((ok ? 'ok   ' : 'FAIL ') + na
 const base = process.argv[2];
 const local = base ? null : await serve();
 const origin = base || local.url;
-const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined, proxy: process.env.PW_PROXY ? { server: process.env.PW_PROXY } : undefined });
 
 async function page(opts = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ja-JP' });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ja-JP', ignoreHTTPSErrors: !!process.env.PW_INSECURE });
   const p = await ctx.newPage();
   const errors = [];
   p.on('pageerror', e => errors.push('pageerror: ' + e.message));
