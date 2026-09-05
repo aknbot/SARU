@@ -23,12 +23,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap"></noscript>
-<link rel="stylesheet" href="app.css?v=2.0.0">
-<script src="vendor/supabase.js?v=2.0.0" defer></script>
-<script src="config.js?v=2.0.0" defer></script>
-<script src="exams.js?v=2.0.0" defer></script>
-<script src="courses.js?v=2.0.0" defer></script>
-<script src="app.js?v=2.0.0" defer></script>
+<link rel="stylesheet" href="app.css?v=2.1.0">
+<script src="vendor/supabase.js?v=2.1.0" defer></script>
+<script src="config.js?v=2.1.0" defer></script>
+<script src="exams.js?v=2.1.0" defer></script>
+<script src="courses.js?v=2.1.0" defer></script>
+<script src="app.js?v=2.1.0" defer></script>
 </head>
 <body>
 
@@ -36,11 +36,20 @@
 <div class="gate" id="gate">
   <div class="land">
     <header class="land-top">
-      <p class="brand" id="gate-brand">検定ノート</p>
+      <p class="brand" id="gate-brand"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h5M8 17h6"/></svg></span>検定ノート</p>
       <button type="button" class="btn small" data-login>ログイン</button>
     </header>
 
     <section class="hero">
+      <svg class="hero-art" viewBox="0 0 300 220" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
+          <rect x="20" y="30" width="180" height="170" rx="10"/>
+          <path d="M40 60h60M40 80h100M40 100h80M40 120h110M40 140h70"/>
+          <path d="M150 190l30-40 30 20 40-60" stroke-width="3"/>
+          <circle cx="250" cy="110" r="4" fill="#fff"/>
+        </g>
+        <g fill="#fff" opacity=".22"><rect x="210" y="150" width="14" height="50" rx="3"/><rect x="232" y="130" width="14" height="70" rx="3"/><rect x="254" y="160" width="14" height="40" rx="3"/><rect x="276" y="120" width="14" height="80" rx="3"/></g>
+      </svg>
       <p class="eyebrow">ビジネス会計検定 3級・2級</p>
       <h1>財務諸表が読める人に、<br>試験日までの毎日30分で。</h1>
       <p class="hero-sub">要点ノート・一問一答・本番形式の模擬試験・試験日から逆算した学習予定を、ひとつのアプリに。進捗はスマホとPCで自動同期されます。</p>
@@ -53,6 +62,11 @@
         <p class="hero-note">ログインすると<a href="terms.html">利用規約</a>と<a href="privacy.html">プライバシーポリシー</a>に同意したものとみなされます。</p>
       </div>
       <p class="note" id="gate-note" hidden></p>
+      <ul class="hero-stats" aria-label="収録内容">
+        <li><b id="hero-qcount">400</b>問の一問一答</li>
+        <li><b>3級・2級</b>の2コース</li>
+        <li><b>2</b>時間の本番形式模試</li>
+      </ul>
     </section>
 
     <section class="feat">
@@ -102,7 +116,7 @@
 <!-- ===== アプリ本体 ===== -->
 <main class="app" id="app" hidden>
   <header class="top">
-    <h1 class="brand"><a href="#/" id="brand-link">検定ノート</a><small id="brand-badge"></small></h1>
+    <h1 class="brand"><a href="#/" id="brand-link"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h5M8 17h6"/></svg></span>検定ノート</a><small id="brand-badge"></small></h1>
     <div class="right">
       <div class="meta">
         <div class="countdown" id="countdown"></div>

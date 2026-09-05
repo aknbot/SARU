@@ -75,7 +75,7 @@
   const gate=$('#gate'), app=$('#app');
   function gateStatus(msg, isError){ const s=$('#gate-status'); s.textContent=msg||''; s.hidden=!msg; const n=$('#gate-note'); if(isError){ n.textContent=msg; n.hidden=false; s.hidden=true; } else { n.hidden=true; } }
   function gateReady(){ $$('[data-login]').forEach(b=>b.disabled=false); gateStatus(''); }
-  $('#gate-brand').textContent=SITE_NAME; $('#brand-link').textContent=SITE_NAME;
+  ['#gate-brand','#brand-link'].forEach(sel=>{ const el=$(sel); if(!el) return; const mark=el.querySelector('.mark'); el.textContent=''; if(mark) el.appendChild(mark); el.appendChild(document.createTextNode(SITE_NAME)); });
   if(SITE.contactEmail){ ['#gate-contact','#settings-contact'].forEach(s=>{ const a=$(s); a.href='mailto:'+SITE.contactEmail; a.hidden=false; }); }
   $$('[data-login]').forEach(b=>b.addEventListener('click', login));
   let started=false;
@@ -86,7 +86,7 @@
   function renderGateCourses(){
     const el=$('#gate-course-list'); if(!el) return;
     el.innerHTML=LIST.map(c=>{ const ex=nextExamFor(c.id); return '<div class="course" style="cursor:default"><div class="em" aria-hidden="true">'+esc(c.emoji||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p></div><div class="d">'+(ex?'第'+ex.round+'回<b>'+md(ex.date)+'</b>':'')+'</div></div>'; }).join('');
-    const total=LIST.reduce((n,c)=>n+num(c.questions),0); if(total) $('#gate-qcount').textContent=String(total);
+    const total=LIST.reduce((n,c)=>n+num(c.questions),0); if(total){ $('#gate-qcount').textContent=String(total); const h=$('#hero-qcount'); if(h) h.textContent=String(total); }
   }
   renderGateCourses();
 
@@ -626,7 +626,7 @@
     if($('#v-notes').classList.contains('on')){ scrollToChapter(id); return; }
     pendingChapter=id; location.hash='#/c/'+course.id+'/notes';
   }
-  function scrollToChapter(id){ const d=$('#'+id); if(!d) return; d.open=true; setTimeout(()=>{ const sm=$('summary', d); if(sm){ sm.setAttribute('tabindex','-1'); try{ sm.focus({preventScroll:true}); }catch(e){} } d.scrollIntoView({behavior: RM.matches?'auto':'smooth', block:'start'}); }, 60); }
+  function scrollToChapter(id){ const d=$("#"+id); if(!d) return; d.open=true; $$("#chapnav a").forEach(a=>a.classList.toggle("on", a.dataset.ch===id)); setTimeout(()=>{ const sm=$('summary', d); if(sm){ sm.setAttribute('tabindex','-1'); try{ sm.focus({preventScroll:true}); }catch(e){} } d.scrollIntoView({behavior: RM.matches?'auto':'smooth', block:'start'}); }, 60); }
   const _showView=showView;
   showView=function(view){ _showView(view); if(view==='notes' && pendingChapter){ const id=pendingChapter; pendingChapter=null; setTimeout(()=>scrollToChapter(id), 30); } };
 

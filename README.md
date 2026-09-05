@@ -81,6 +81,12 @@ Project Settings → API Keys の **Project URL** と **publishable key**（`sb_
 - ステップは `course.js` の `steps`。`days`（日数）で書く。旧形式の `s`/`e`（絶対日付）も長さだけ使われる。実際の日付は「受験する回」と「開始日」から自動で組む
 - 試験回を足すときは `exams.js` に 1 件追加（公式サイトで必ず確認）
 
+## 教材の範囲と出典の照合
+
+- 2級ノート（`courses/bk2`）は公式テキスト2級（第6版）の 9 章・全節の見出しと、第38回（2026年3月）の全問（TAC 解答解説）、公式サイトの過去問題例（第28回抜粋）に照らして論点の抜けを埋めている。3級も第38回の全問と公式の問題例で照合済み
+- 公式テキスト・公式過去問題集の本文は転載していない。数値例は独自に作成したもの
+- 新しい回の試験が終わったら、TAC の解答速報ページ（https://www.tac-school.co.jp/kouza_boki/sokuhou_business_kaikei.html）の解説 PDF を読み、初出の論点を `notes.html` と `questions.js` に足す。公式テキストの改版・正誤表（https://www.b-accounting.jp/text/text.html）も確認する
+
 ## 法務ページの仕上げ
 
 `terms.html` / `privacy.html` / `tokushoho.html` の `<span class="ph">【…】</span>` を事業者情報に置き換える（事業者名・住所・連絡先・管轄裁判所・Supabase のリージョン）。`config.js` の `contactEmail` を入れると「お問い合わせ」リンクが出る。
