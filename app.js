@@ -207,6 +207,9 @@
     ids.forEach(id=>{ const w=Math.max(a.wrong[id]||0,b.wrong[id]||0), c=Math.max(a.cleared[id]||0,b.cleared[id]||0); if(w>c) m.wrong[id]=w; if(c) m.cleared[id]=c; });
     new Set([...Object.keys(a.best),...Object.keys(b.best)]).forEach(k=>{ const x=a.best[k], y=b.best[k]; m.best[k] = (!y||(x&&x.p>=y.p)) ? x : y; });
     const pa=a.plan, pb=b.plan; m.plan = (pa&&pb) ? ((pa.at||0)>=(pb.at||0)?pa:pb) : (pa||pb||null);
+    /* 受験する回を切り替えた側があれば、その側の完了チェック・申込状況を採用する（古い回のチェックが復活しないように） */
+    if(pa&&pb&&pa.round!==pb.round){ const src=(m.plan===pa)?a:b; m.sched=Object.assign({},src.sched); m.applied=!!src.applied; }
+    if(!m.plan) delete m.plan;
     if(a._legacyWrong) m._legacyWrong=a._legacyWrong; if(b._legacyWrong) m._legacyWrong=(m._legacyWrong||[]).concat(b._legacyWrong);
     m.done=Math.max(a.done,b.done); m.total=Math.max(a.total,b.total);
     m.updatedAt=Math.max(a.updatedAt||0,b.updatedAt||0);
