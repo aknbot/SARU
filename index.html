@@ -23,12 +23,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap"></noscript>
-<link rel="stylesheet" href="app.css?v=2.1.0">
-<script src="vendor/supabase.js?v=2.1.0" defer></script>
-<script src="config.js?v=2.1.0" defer></script>
-<script src="exams.js?v=2.1.0" defer></script>
-<script src="courses.js?v=2.1.0" defer></script>
-<script src="app.js?v=2.1.0" defer></script>
+<link rel="stylesheet" href="app.css?v=2.1.1">
+<script src="vendor/supabase.js?v=2.1.1" defer></script>
+<script src="config.js?v=2.1.1" defer></script>
+<script src="exams.js?v=2.1.1" defer></script>
+<script src="courses.js?v=2.1.1" defer></script>
+<script src="app.js?v=2.1.1" defer></script>
 </head>
 <body>
 
@@ -41,15 +41,6 @@
     </header>
 
     <section class="hero">
-      <svg class="hero-art" viewBox="0 0 300 220" aria-hidden="true" focusable="false">
-        <g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".9">
-          <rect x="20" y="30" width="180" height="170" rx="10"/>
-          <path d="M40 60h60M40 80h100M40 100h80M40 120h110M40 140h70"/>
-          <path d="M150 190l30-40 30 20 40-60" stroke-width="3"/>
-          <circle cx="250" cy="110" r="4" fill="#fff"/>
-        </g>
-        <g fill="#fff" opacity=".22"><rect x="210" y="150" width="14" height="50" rx="3"/><rect x="232" y="130" width="14" height="70" rx="3"/><rect x="254" y="160" width="14" height="40" rx="3"/><rect x="276" y="120" width="14" height="80" rx="3"/></g>
-      </svg>
       <p class="eyebrow">ビジネス会計検定 3級・2級</p>
       <h1>財務諸表が読める人に、<br>試験日までの毎日30分で。</h1>
       <p class="hero-sub">要点ノート・一問一答・本番形式の模擬試験・試験日から逆算した学習予定を、ひとつのアプリに。進捗はスマホとPCで自動同期されます。</p>
@@ -63,7 +54,7 @@
       </div>
       <p class="note" id="gate-note" hidden></p>
       <ul class="hero-stats" aria-label="収録内容">
-        <li><b id="hero-qcount">400</b>問の一問一答</li>
+        <li><b id="hero-qcount">500</b>問の一問一答・資料問題</li>
         <li><b>3級・2級</b>の2コース</li>
         <li><b>2</b>時間の本番形式模試</li>
       </ul>
@@ -73,10 +64,10 @@
       <p class="eyebrow" lang="en">Features</p>
       <h2>合格に必要なものだけ</h2>
       <div class="feat-grid">
-        <div class="feat-card"><div class="ic" aria-hidden="true">📖</div><h3>赤シート付き要点ノート</h3><p>公式テキストの章立てに沿った要点を、用語と計算式を隠しながら読める。タップで一つずつ確認。</p></div>
-        <div class="feat-card"><div class="ic" aria-hidden="true">✍️</div><h3>一問一答 <span id="gate-qcount">400</span>問超</h3><p>分野別セット・総合ランダム・間違えた問題だけの復習リスト。解説つきで、正解するまで追いかける。</p></div>
-        <div class="feat-card"><div class="ic" aria-hidden="true">⏱</div><h3>本番形式の模擬試験</h3><p>2時間タイマー、正誤判定・個別問題・総合問題（資料から計算）の3部構成。大問別の正答率と合格判定。</p></div>
-        <div class="feat-card"><div class="ic" aria-hidden="true">📅</div><h3>試験日から逆算した予定</h3><p>今日やることが最初に出る。途中から始めても、受験する回に合わせて予定を組み直せる。</p></div>
+        <div class="feat-card"><div class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4z"/><path d="M20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6z"/></svg></div><h3>赤シート付き要点ノート</h3><p>公式テキストの章立てに沿った要点を、用語と計算式を隠しながら読める。タップで一つずつ確認。</p></div>
+        <div class="feat-card"><div class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M12.5 7.5l4 4"/></svg></div><h3>一問一答 <span id="gate-qcount">500</span>問</h3><p>分野別セット・総合ランダム・間違えた問題だけの復習リスト。解説つきで、正解するまで追いかける。</p></div>
+        <div class="feat-card"><div class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg></div><h3>本番形式の模擬試験</h3><p>2時間タイマー、正誤判定・個別問題・総合問題（資料から計算）の3部構成。大問別の正答率と合格判定。</p></div>
+        <div class="feat-card"><div class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="1"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div><h3>試験日から逆算した予定</h3><p>今日やることが最初に出る。途中から始めても、受験する回に合わせて予定を組み直せる。</p></div>
       </div>
     </section>
 

@@ -85,7 +85,7 @@
   }
   function renderGateCourses(){
     const el=$('#gate-course-list'); if(!el) return;
-    el.innerHTML=LIST.map(c=>{ const ex=nextExamFor(c.id); return '<div class="course" style="cursor:default"><div class="em" aria-hidden="true">'+esc(c.emoji||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p></div><div class="d">'+(ex?'第'+ex.round+'回<b>'+md(ex.date)+'</b>':'')+'</div></div>'; }).join('');
+    el.innerHTML=LIST.map(c=>{ const ex=nextExamFor(c.id); return '<div class="course" style="cursor:default"><div class="em" aria-hidden="true">'+esc(c.level||c.short||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p></div><div class="d">'+(ex?'第'+ex.round+'回<b>'+md(ex.date)+'</b>':'')+'</div></div>'; }).join('');
     const total=LIST.reduce((n,c)=>n+num(c.questions),0); if(total){ $('#gate-qcount').textContent=String(total); const h=$('#hero-qcount'); if(h) h.textContent=String(total); }
   }
   renderGateCourses();
@@ -399,7 +399,7 @@
     const el=$('#course-list'); if(!el) return;
     el.innerHTML=LIST.map(c=>{
       const s=courseStateSummary(c.id);
-      return '<a class="course" href="#/c/'+c.id+'"><div class="em" aria-hidden="true">'+esc(c.emoji||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p><div class="pb"><i style="width:'+s.pct+'%"></i></div><p class="st">'+esc(s.text)+'</p></div><div class="d">'+(s.ex?(s.d>0?'あと<b>'+s.d+'</b>日':s.d===0?'<b>今日</b>':'終了'):'')+'</div></a>';
+      return '<a class="course" href="#/c/'+c.id+'"><div class="em" aria-hidden="true">'+esc(c.level||c.short||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p><div class="pb"><i style="width:'+s.pct+'%"></i></div><p class="st">'+esc(s.text)+'</p></div><div class="d">'+(s.ex?(s.d>0?'あと<b>'+s.d+'</b>日':s.d===0?'<b>今日</b>':'終了'):'')+'</div></a>';
     }).join('');
     /* 続きから */
     const rc=$('#resume-card'); let last=null; try{ last=localStorage.getItem('kn_last_'+uid()); }catch(e){}
