@@ -823,5 +823,7 @@
   function setTop(){ const h=$('.top'); if(h) document.documentElement.style.setProperty('--toph', h.offsetHeight+'px'); }
   setTop(); window.addEventListener('resize', setTop); window.addEventListener('load', setTop); setTimeout(setTop, 800);
   if('serviceWorker' in navigator && location.protocol==='https:' && SITE.serviceWorker!==false){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+  /* テスト・デバッグ用の公開API（副作用なし） */
+  window.KN = Object.freeze({ version: APP_VERSION, merge, sanitize, buildPlan: (c,p)=>buildPlan(c,p) });
   initAuth();
 })();
