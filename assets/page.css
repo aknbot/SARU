@@ -1,0 +1,51 @@
+/* 検定ノート — 静的ページ（利用規約・プライバシーポリシー・特商法表記など）共通スタイル */
+:root{
+  --bg:#F3F6F3; --surface:#FFFFFF; --surface2:#E8EFE9; --ink:#1B241F; --muted:#5C6B62; --line:#D5DED7; --line-strong:#B4C3B9;
+  --accent:#1F6B4A; --accent-ink:#FFFFFF; --accent-soft:#E0EEE5; --accent-text:#1D6244;
+  --aka:#C4432B; --aka-soft:#F9E4DF; --aka-text:#A9351F;
+  --grid:rgba(31,107,74,.085);
+  --shadow:0 1px 2px rgba(26,33,48,.06), 0 4px 14px rgba(26,33,48,.06);
+  --radius:12px;
+  --font-body:"Zen Kaku Gothic New","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --font-display:"Zen Old Mincho","Hiragino Mincho ProN","Yu Mincho","MS Mincho",serif;
+  --font-mono:"IBM Plex Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111714; --surface:#19211C; --surface2:#222D26; --ink:#E5EBE7; --muted:#94A79B; --line:#2A362E; --line-strong:#3B4C41;
+    --accent:#7ECFA8; --accent-ink:#0C2418; --accent-soft:#1C3328; --accent-text:#9BDBBB;
+    --aka:#E9846A; --aka-soft:#3A2420; --aka-text:#F3A08A;
+    --grid:rgba(126,207,168,.07);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 4px 14px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:16px; line-height:1.8;
+  background-image:linear-gradient(var(--grid) 1px, transparent 1px); background-size:100% 28px}
+a{color:var(--accent-text)}
+.page{max-width:720px; margin:0 auto; padding:0 16px 48px}
+.top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:16px 0 12px; border-bottom:1px solid var(--line); margin-bottom:22px}
+.brand{font-family:var(--font-display); font-weight:700; font-size:20px; margin:0}
+.brand a{color:inherit; text-decoration:none}
+.top nav a{font-size:13px; margin-left:12px; text-decoration:none; font-weight:700}
+.eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 6px}
+h1{font-family:var(--font-display); font-weight:700; font-size:26px; line-height:1.35; margin:0 0 6px}
+.updated{font-family:var(--font-mono); font-size:12px; color:var(--muted); margin:0 0 20px}
+h2{font-family:var(--font-display); font-weight:700; font-size:18px; line-height:1.4; margin:30px 0 8px; padding-left:10px; border-left:3px solid var(--accent)}
+h3{font-size:15.5px; font-weight:700; margin:18px 0 6px; color:var(--accent-text)}
+p{margin:0 0 12px}
+ol,ul{padding-left:1.4em; margin:6px 0 12px}
+li{margin-bottom:4px}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); margin-bottom:16px}
+.note{border-left:3px solid var(--aka); background:var(--aka-soft); border-radius:0 10px 10px 0; padding:10px 14px; margin:14px 0; font-size:14.5px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:14.5px; line-height:1.6}
+th,td{border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top}
+th{background:var(--surface2); font-weight:700; white-space:nowrap; width:30%}
+.ph{background:var(--aka-soft); color:var(--aka-text); font-weight:700; padding:0 4px; border-radius:4px}
+footer{margin-top:40px; padding-top:16px; border-top:1px solid var(--line); font-size:13px; color:var(--muted)}
+footer nav{display:flex; flex-wrap:wrap; gap:6px 16px; margin-bottom:8px}
+footer a{text-decoration:none; font-weight:700}
+.btn{display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border-radius:10px; background:var(--accent); color:var(--accent-ink); text-decoration:none; font-weight:700}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important} }

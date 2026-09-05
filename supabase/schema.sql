@@ -33,3 +33,28 @@ drop policy if exists "progress: delete own" on public.progress;
 create policy "progress: delete own" on public.progress
   for delete to authenticated
   using (auth.uid() = user_id);
+
+-- updated_at はサーバー時刻で上書き（端末の時計に依存しない）
+create or replace function public.set_updated_at() returns trigger
+language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end; $$;
+drop trigger if exists progress_set_updated_at on public.progress;
+create trigger progress_set_updated_at before insert or update on public.progress
+  for each row execute function public.set_updated_at();
+
+-- アカウント削除（本人のみ）。アプリの「設定 → アカウントを削除」から rpc('delete_own_account') で呼ばれる。
+-- progress は on delete cascade で消える。
+create or replace function public.delete_own_account() returns void
+language plpgsql security definer set search_path = public, auth as $$
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+  delete from public.progress where user_id = auth.uid();
+  delete from auth.users where id = auth.uid();
+end; $$;
+revoke all on function public.delete_own_account() from public;
+grant execute on function public.delete_own_account() to authenticated;

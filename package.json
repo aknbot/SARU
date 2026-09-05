@@ -1,0 +1,15 @@
+{
+  "name": "kentei-note",
+  "private": true,
+  "version": "2.0.0",
+  "description": "検定ノート — ビジネス会計検定 3級・2級 学習サイト（静的サイト）",
+  "type": "module",
+  "scripts": {
+    "stamp": "node scripts/stamp-version.mjs",
+    "test": "node tests/smoke.mjs",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

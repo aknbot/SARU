@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ページが見つかりません | 検定ノート</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<style>
+body{margin:0;font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;background:#F3F6F3;color:#1B241F;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+.box{max-width:420px;text-align:center}
+h1{font-size:22px;margin:0 0 8px}
+p{color:#5C6B62;margin:0 0 18px;line-height:1.7}
+a.btn{display:inline-block;background:#1F6B4A;color:#fff;text-decoration:none;font-weight:700;padding:12px 20px;border-radius:10px}
+@media (prefers-color-scheme:dark){body{background:#111714;color:#E5EBE7}p{color:#94A79B}a.btn{background:#7ECFA8;color:#0C2418}}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>ページが見つかりません</h1>
+  <p>URL が間違っているか、ページが移動した可能性があります。</p>
+  <a class="btn" href="./">トップへ戻る</a>
+</div>
+<script>
+// 旧リンク（#/... 形式）はそのままトップへ引き継ぐ
+try{ if(location.hash){ location.replace('./'+location.hash); } }catch(e){}
+</script>
+</body>
+</html>
