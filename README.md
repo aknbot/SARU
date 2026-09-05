@@ -2,14 +2,15 @@
 
 サルでも受かる検定対策。ビジネス会計検定 3級 / 2級の学習サイト（静的サイト、GitHub Pages で公開）。
 
-- 進捗はブラウザの localStorage に保存される（ログイン不要で使える）
-- Google でログインすると Supabase に同期され、スマホ・PC 間で進捗を共有できる
+- Google でログインして使う（`config.js` の `requireLogin: true`）。進捗は Supabase に同期され、スマホ・PC 間で共有される
+- `requireLogin: false` にするとログインなしでも使え、その場合は進捗がブラウザの localStorage にだけ保存される
+- 注意: ログイン必須にしても、問題やノートのファイル自体は GitHub Pages 上に公開されている（URL を直接叩けば読める）。ログインは「アプリとして使う入口」を制限するもので、コンテンツの秘匿ではない
 
 ## ファイル構成
 
 ```
 index.html          エンジン本体（HTML / CSS / JS）
-config.js           サイト設定（サイト名・Supabase の URL と anon key）← ここだけ書き換える
+config.js           サイト設定（サイト名・ログイン必須フラグ・Supabase の URL と anon key）← ここだけ書き換える
 courses.js          トップページに並ぶコース一覧
 courses/<id>/       各コースの中身
   course.js           ステップ構成・テーマ色・試験日
@@ -76,6 +77,7 @@ Supabase ダッシュボード → **Project Settings → API** から
 ```js
 window.SITE = {
   name: '検定ノート',
+  requireLogin: true,
   supabaseUrl: 'https://xxxxxxxxxxxx.supabase.co',
   supabaseAnonKey: 'eyJhbGciOi...'
 };
@@ -83,7 +85,7 @@ window.SITE = {
 
 anon key は公開して問題ないキー（RLS で守る前提のもの）。**service_role キーは絶対に貼らない**こと。
 
-設定前は「ログイン機能は未設定」と表示され、端末内保存だけで動く。設定後はアカウント欄に「Googleでログイン」ボタンが出る。
+設定前は「ログイン機能は未設定」と表示され、端末内保存だけで動く（`requireLogin` は無視される）。設定後は起動時にログイン画面が出る。
 
 ## ローカルで確認する
 

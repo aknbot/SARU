@@ -234,6 +234,12 @@ ul.b li{margin-bottom:4px}
 
 /* ===== site: course list / account ===== */
 .brand a{color:inherit; text-decoration:none}
+.gate{position:fixed; inset:0; z-index:50; background:var(--bg); background-image:linear-gradient(var(--grid) 1px, transparent 1px); background-size:100% 28px; display:flex; align-items:center; justify-content:center; padding:24px}
+.gate .box{width:min(420px,100%); background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:28px 24px; text-align:center}
+.gate .brand{font-size:26px; margin:6px 0 4px}
+.gate .gate-lead{margin:0 0 18px; color:var(--muted); font-size:14px}
+.gate .btn{min-height:48px; font-size:16px}
+.gate .note{margin:14px 0 0; font-size:12px; color:var(--muted)}
 .course{display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow); text-decoration:none; color:inherit}
 .course .em{font-size:28px; line-height:1}
 .course .t{font-weight:700; font-size:16px; margin:0}
@@ -285,7 +291,7 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
     <p class="eyebrow">Courses</p>
     <h2>コースを選ぶ</h2>
     <div id="course-list" class="stack"></div>
-    <p class="small muted" style="margin-top:14px">友人を誘うときはこのページのURLを送るだけ。各自がGoogleでログインすると、進捗はその人だけのものとしてスマホ・PCで同期される。</p>
+    <p class="small muted" style="margin-top:14px">誘うときはこのページのURLを送るだけ。各自がGoogleでログインすると、進捗はその人だけのものとしてスマホ・PCで同期される。</p>
   </section>
 
   <!-- ===== ホーム ===== -->
@@ -371,6 +377,15 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
   <button type="button" data-view="quiz" aria-label="問題"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.7"/><path d="M12 17h.01"/></svg>問題</button>
   <button type="button" data-view="sched" aria-label="予定"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2.5 2.5L16 12"/></svg>予定</button>
 </nav>
+<div class="gate" id="gate" hidden>
+  <div class="box">
+    <p class="eyebrow">Sign in</p>
+    <h1 class="brand" id="gate-brand"></h1>
+    <p class="gate-lead">利用にはログインが必要です。進捗はアカウントごとに保存され、スマホ・PCで同期されます。</p>
+    <button type="button" class="btn primary block" id="gate-login">Googleでログイン</button>
+    <p class="note" id="gate-note" hidden></p>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="config.js"></script>
@@ -399,6 +414,19 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
   const configured = !!(window.supabase && SITE.supabaseUrl && SITE.supabaseAnonKey && !/YOUR-/.test(SITE.supabaseUrl+SITE.supabaseAnonKey));
   try{ if(configured) sb = window.supabase.createClient(SITE.supabaseUrl, SITE.supabaseAnonKey); }catch(e){ sb=null; }
   function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=false; }
+  /* ログイン必須ゲート（config.js の requireLogin。Supabase 未設定時は無効） */
+  const REQUIRE_LOGIN = !!sb && SITE.requireLogin !== false;
+  function gated(){ return REQUIRE_LOGIN && !user; }
+  let started=false;
+  function start(){ if(started) return; started=true; route(); }
+  function updateGate(){
+    const g=$('#gate'); const app=$('.app');
+    if(gated()){ g.hidden=false; app.hidden=true; }
+    else { g.hidden=true; app.hidden=false; start(); }
+  }
+  $('#gate-brand').textContent = SITE.name || '検定ノート';
+  $('#gate-login').addEventListener('click', login);
+  if(REQUIRE_LOGIN){ $('.app').hidden=true; }
   async function initAuth(){
     renderAccount();
     if(!sb) return;
@@ -408,10 +436,13 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
       sb.auth.onAuthStateChange((ev, session)=>{
         const was = user && user.id; user = session ? session.user : null;
         renderAccount();
+        if(REQUIRE_LOGIN && !user){ started=false; }
+        updateGate();
         if(user && user.id!==was && course) pullProgress();
       });
     }catch(e){}
     renderAccount();
+    updateGate();
     /* ログインから戻ってきたら元のコースへ */
     try{ const back=sessionStorage.getItem('kn_return'); if(back){ sessionStorage.removeItem('kn_return'); if(location.search){ history.replaceState(null,'',location.pathname+back); } else { location.hash=back; } } }catch(e){}
   }
@@ -419,7 +450,7 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
     if(!sb){ toast('ログイン機能が未設定（config.js）'); return; }
     try{ sessionStorage.setItem('kn_return', location.hash||'#/'); }catch(e){}
     const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + location.pathname } });
-    if(error) toast('ログインに失敗: '+error.message);
+    if(error){ toast('ログインに失敗: '+error.message); const n=$('#gate-note'); n.textContent='ログインに失敗: '+error.message; n.hidden=false; }
   }
   async function logout(){ if(!sb) return; await sb.auth.signOut(); user=null; renderAccount(); setSync('off','端末に保存（ログインで同期）'); toast('ログアウトした'); }
   function renderAccount(){
@@ -476,6 +507,7 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
 
   /* =================== ルーティング =================== */
   function route(){
+    if(gated()) return;
     const h=location.hash||'#/';
     const m=h.match(/^#\/c\/([a-z0-9_-]+)(?:\/([a-z]+))?/);
     if(m) openCourse(m[1], m[2]||'home'); else showIndex();
@@ -802,7 +834,7 @@ details.ds .cap{font-size:12px; color:var(--muted); padding:6px 10px 0}
   /* =================== 起動 =================== */
   function setTop(){ const h=$('.top'); if(h) document.documentElement.style.setProperty('--toph', h.offsetHeight+'px'); }
   setTop(); window.addEventListener('resize', setTop); window.addEventListener('load', setTop); setTimeout(setTop, 800);
-  initAuth().then(route);
+  initAuth().then(()=>{ if(!REQUIRE_LOGIN) start(); });
 })();
 
 </script>
