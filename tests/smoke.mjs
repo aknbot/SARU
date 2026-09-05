@@ -91,6 +91,12 @@ async function page(opts = {}) {
   await p.click('#sched input[type=checkbox]'); await p.waitForTimeout(200);
   await p.click('#nav button[data-view="home"]'); await p.waitForTimeout(200);
   check('step done reflected on home', (await p.textContent('#prog-text')).includes('1 /'));
+  // 完了にしたステップの次が今日の画面の先頭に出る（手動で戻った場合は維持、再読み込みで戻る）
+  const shown1 = await p.textContent('#today-card .daynum');
+  check('home shows next uncompleted step after completing today\'s', /STEP 02/.test(shown1) && /予定より先行/.test(shown1), shown1);
+  await p.click('#day-prev'); await p.waitForTimeout(100);
+  await p.click('#nav button[data-view="notes"]'); await p.waitForTimeout(100); await p.click('#nav button[data-view="home"]'); await p.waitForTimeout(150);
+  check('manual step navigation is kept across tabs', /STEP 01/.test(await p.textContent('#today-card .daynum')));
   // 模試
   await p.click('#nav button[data-view="quiz"]'); await p.waitForTimeout(300);
   check('quiz in progress is kept across tabs', !!(await p.$('#quit')));
@@ -113,6 +119,9 @@ async function page(opts = {}) {
   check('settings view', await p.evaluate(()=>document.querySelector('.view.on')?.id==='v-settings') && !!(await p.$('#delete-account')));
   await p.click('#bk-export'); await p.waitForTimeout(200);
   check('backup code produced', (await p.inputValue('#bk-code')).startsWith('KN-'));
+  // 再読み込み後は、完了にしたステップの次が先頭に出る（上で STEP 1 を完了にしている）
+  await p.goto(origin + '#/c/bk3/home', { waitUntil: 'load' }); await p.waitForTimeout(900);
+  check('next uncompleted step shown after reload', /STEP 02/.test(await p.textContent('#today-card .daynum')), await p.textContent('#today-card .daynum'));
   check('no JS errors (course)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }

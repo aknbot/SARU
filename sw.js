@@ -1,7 +1,7 @@
 /* 検定ノート service worker
    方針: 同一オリジンの HTML / JS / CSS / 教材は network-first（更新をすぐ反映）、失敗時のみキャッシュ。
          フォント・アイコンは cache-first。Supabase API はキャッシュしない。 */
-const VERSION = 'kn-2.1.1';
+const VERSION = 'kn-2.1.2';
 const CORE = ['./', './index.html', './app.css', './app.js', './config.js', './exams.js', './courses.js', './vendor/supabase.js', './manifest.webmanifest', './assets/icons/icon-192.png', './assets/icons/icon-512.png', './404.html', './assets/page.css'];
 
 self.addEventListener('install', e => {

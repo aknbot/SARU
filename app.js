@@ -357,6 +357,14 @@
     for(let i=0;i<S.length;i++){ if(t>=S[i].s && t<=S[i].e) return i; }
     return S.length-1;
   }
+  /* 今日の画面に出すステップ：今日以降で最初の未完了。予定が始まる前は STEP 1、全部完了なら最後 */
+  function homeIndex(){
+    const S=STEPS(); if(!S.length) return 0;
+    if(todayStr() < S[0].s) return 0;
+    const checks=store.get('sched',{});
+    for(let i=todayIndex(); i<S.length; i++){ if(!checks[S[i].n]) return i; }
+    return S.length-1;
+  }
   function examPassed(){ return course && course.plan.examDate < todayStr(); }
 
   /* =================== ルーティング =================== */
@@ -464,7 +472,7 @@
       ensurePlan();
       applyTheme(c.theme); $('#brand-badge').textContent=(LEVELS[id]&&LEVELS[id].name)||c.badge||'';
       document.title=(c.short||c.title)+' · '+SITE_NAME;
-      homeStep=todayIndex();
+      homeManual=false;
       renderStatic(); renderNotes(); rerenderAll();
       $('#nav').hidden=false;
       renderCountdown();
@@ -472,6 +480,7 @@
       try{ localStorage.setItem('kn_last_'+uid(), id); }catch(e){}
       if(sb&&user) pullProgress();
     }
+    if(view==='home' && !homeManual){ const i=homeIndex(); if(i!==homeStep){ homeStep=i; renderHome(); } }
     showView(view);
     if(view==='quiz' && !quiz.active) renderSetPicker();
   }
@@ -480,7 +489,7 @@
     const ex=course.plan.exam; const d=daysUntil(course.plan.examDate);
     $('#countdown').innerHTML=(ex?'第'+ex.round+'回 · ':'')+(d>0?'試験まで <b>'+d+'</b> 日':d===0?'<b>今日が試験日</b>':'試験終了');
   }
-  function rerenderAll(){ if(!course) return; ensurePlan(); renderHome(); renderSched(); applySheet(); renderCountdown(); if($('#v-quiz').classList.contains('on') && !quiz.active) renderSetPicker(); }
+  function rerenderAll(){ if(!course) return; ensurePlan(); if(!homeManual) homeStep=homeIndex(); renderHome(); renderSched(); applySheet(); renderCountdown(); if($('#v-quiz').classList.contains('on') && !quiz.active) renderSetPicker(); }
 
   /* =================== 静的部分（試験情報など） =================== */
   function factsHtml(){
@@ -517,13 +526,13 @@
     $('#plan-apply').addEventListener('click', ()=>{
       const round=Number($('#plan-round').value); const start=$('#plan-start').value||todayStr();
       const exd=(examByRound(c.id, round)||{}).date; if(exd && start>exd){ toast('開始日は試験日（'+jpDate(exd)+'）より前にしてください。'); return; }
-      mem.plan={round, start, at:Date.now()}; touch(); ensurePlan(); homeStep=todayIndex(); rerenderAll(); toast('予定を組み直しました。');
+      mem.plan={round, start, at:Date.now()}; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast('予定を組み直しました。');
     });
     $('#sched-note').textContent=(p.exam?jpDate(p.start)+'から第'+p.exam.round+'回（'+jpDate(p.examDate)+'）まで、':'')+STEPS().length+'ステップ。終わったステップはチェックを入れる。遅れたら次のステップに進まず、今のステップを縮めて追いつく。';
   }
 
   /* =================== 今日・予定 =================== */
-  let homeStep=0;
+  let homeStep=0, homeManual=false;   // homeManual: ‹ › で手動移動中は自動で戻さない
   function range(st){ return st.s===st.e ? md(st.s) : md(st.s)+'–'+md(st.e); }
   function chapterTitle(id){ const d=$('#'+id); if(!d) return id; const n=$('summary .name', d); return n ? n.childNodes[0].textContent.trim() : id; }
   function bestOf(n){ const b=store.get('best',{}); return b[n]; }
@@ -552,7 +561,7 @@
   async function switchRound(round){
     if(!(await ask({title:'第'+round+'回の予定に切り替えますか？', body:'今の回の完了チェックと申込状況はリセットされます（正答率・復習リストは残ります）。', ok:'切り替える', danger:true}))) return;
     const now=Date.now(); const u=Object.assign({},store.get('unsched',{})); Object.keys(store.get('sched',{})).forEach(n=>{ u[n]=now; });
-    mem.plan={round, start:todayStr(), at:now}; mem.sched={}; mem.unsched=u; mem.applied=false; touch(); ensurePlan(); homeStep=todayIndex(); rerenderAll(); toast('第'+round+'回に向けた予定に切り替えました。');
+    mem.plan={round, start:todayStr(), at:now}; mem.sched={}; mem.unsched=u; mem.applied=false; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast('第'+round+'回に向けた予定に切り替えました。');
   }
   function renderPlanNotice(){
     const el=$('#plan-notice'); const p=course.plan; const t=todayStr();
@@ -569,7 +578,7 @@
   function renderHome(){
     const c=course, S=STEPS();
     renderPlanNotice(); renderDeadline();
-    const d=S[Math.min(homeStep,S.length-1)]; const checks=store.get('sched',{}); const startedPlan=todayStr()>=S[0].s; const isNow=startedPlan && S[todayIndex()].n===d.n;
+    const d=S[Math.min(homeStep,S.length-1)]; const checks=store.get('sched',{}); const startedPlan=todayStr()>=S[0].s; const ti=todayIndex(); const isNow=startedPlan && S[ti].n===d.n; const ahead=startedPlan && !isNow && homeStep>ti && S.slice(ti,homeStep).every(x=>checks[x.n]);
     let steps='';
     if(d.read.length) steps+='<li><span class="t">15分</span><span>ノートを読む：'+d.read.map(id=>'<a href="#" data-ch="'+id+'">'+esc(chapterTitle(id))+'</a>').join('、')+'</span><span><button class="btn small primary" data-ch="'+d.read[0]+'">開く</button></span></li>';
     if(d.set==='mix'){
@@ -585,13 +594,13 @@
     }
     const exx=c.plan.exam; const flag = (d.n===S[0].n && !store.get('applied',false) && exx && todayStr()<=exx.apply.card && !(exx.applyFrom && todayStr()<exx.applyFrom)) ? '<span class="chip warn">まず申込</span>' : '';
     $('#today-card').innerHTML=
-      '<div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="daynum">STEP '+String(d.n).padStart(2,'0')+' · '+range(d)+(isNow?' · 今ここ':'')+'</span>'+
+      '<div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="daynum">STEP '+String(d.n).padStart(2,'0')+' · '+range(d)+(isNow?' · 今ここ':ahead?' · 予定より先行':'')+'</span>'+
       '<span class="row" style="gap:4px"><button class="btn small ghost icon" id="day-prev" aria-label="前のステップ" '+(homeStep===0?'disabled':'')+'><span aria-hidden="true">‹</span></button><button class="btn small ghost icon" id="day-next" aria-label="次のステップ" '+(homeStep===S.length-1?'disabled':'')+'><span aria-hidden="true">›</span></button></span></div>'+
       '<h2 style="font-size:20px;margin-bottom:4px">'+esc(d.title)+(flag?' '+flag:'')+(d.exam?' <span class="chip aka">本番</span>':'')+'</h2>'+
       '<p class="small muted" style="margin:0">'+esc(d.desc)+'</p><ol class="steps">'+steps+'</ol>'+
       '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:700;cursor:pointer"><input type="checkbox" id="today-done" style="width:20px;height:20px;accent-color:var(--accent)" '+(checks[d.n]?'checked':'')+'> このステップを完了にする</label>';
-    $('#day-prev').onclick=()=>{ homeStep=Math.max(0,homeStep-1); renderHome(); const b=$('#day-prev'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-next').focus({preventScroll:true}); };
-    $('#day-next').onclick=()=>{ homeStep=Math.min(S.length-1,homeStep+1); renderHome(); const b=$('#day-next'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-prev').focus({preventScroll:true}); };
+    $('#day-prev').onclick=()=>{ homeManual=true; homeStep=Math.max(0,homeStep-1); renderHome(); const b=$('#day-prev'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-next').focus({preventScroll:true}); };
+    $('#day-next').onclick=()=>{ homeManual=true; homeStep=Math.min(S.length-1,homeStep+1); renderHome(); const b=$('#day-next'); if(b&&!b.disabled) b.focus({preventScroll:true}); else $('#day-prev').focus({preventScroll:true}); };
     $('#today-done').onchange=e=>{ setStepDone(d.n, e.target.checked); if(e.target.checked) toast('STEP '+d.n+' 完了！この調子です。'); };
     const showExamDay = daysUntil(c.plan.examDate)<=7 && daysUntil(c.plan.examDate)>=0;
     $('#examday-card').hidden=!showExamDay;
@@ -632,7 +641,7 @@
 
   /* 日付が変わったら「今ここ」とカウントダウンを更新 */
   let lastDay=todayStr();
-  function checkDayRollover(){ const t=todayStr(); if(t!==lastDay){ lastDay=t; if(course){ homeStep=todayIndex(); rerenderAll(); } else renderIndex(); } }
+  function checkDayRollover(){ const t=todayStr(); if(t!==lastDay){ lastDay=t; if(course){ homeManual=false; rerenderAll(); } else renderIndex(); } }
   setInterval(checkDayRollover, 60000);
 
   /* =================== ノート =================== */
