@@ -22,7 +22,7 @@ courses/<id>/         各コースの中身
   datasets.js           資料問題（財務諸表の表 + 設問）
   notes.html            ノート本文
   legacy.js             旧版（問題IDが配列index）からの復習リスト移行表。編集不要
-vendor/supabase.js    supabase-js 2.115.0（同一オリジンで配信。CDN 障害の影響を受けない）
+vendor/supabase.js    supabase-js 2.115.0（同一オリジンで配信。CDN 障害の影響を受けない。更新手順は vendor/README.md）
 terms.html / privacy.html / tokushoho.html   利用規約・プライバシーポリシー・特定商取引法に基づく表記（assets/page.css）
 404.html              GitHub Pages 用
 manifest.webmanifest / sw.js / assets/icons/   PWA（ホーム画面追加・オフライン閲覧）
@@ -47,7 +47,8 @@ scripts/stamp-version.mjs   config.js の version を index.html / sw.js に反�
 1. https://supabase.com で New project（リージョンは Tokyo）
 2. **SQL Editor** に `supabase/schema.sql` を貼って Run
    - `progress` テーブル、本人しか読み書きできない RLS、`updated_at` のサーバー時刻トリガー、`delete_own_account()`（本人のアカウント削除）が作られる
-   - 既に旧版のテーブルがある場合も、そのまま再実行してよい（`if not exists` / `create or replace`）
+   - 既に旧版のテーブルがある場合も、そのまま再実行してよい（`if not exists` / `drop … if exists` / `create or replace` で何度でも安全）
+   - 変更後は SQL Editor で再実行するだけで反映される（`progress_guard` トリガーと `delete_own_account()` もここで作られる）
 
 ### 2. Google ログイン
 
@@ -59,7 +60,7 @@ scripts/stamp-version.mjs   config.js の version を index.html / sw.js に反�
    - 対象: 外部 → **アプリを公開**（本番）
    - クライアント: ウェブアプリケーション。承認済みリダイレクト URI に Supabase の Callback URL（`https://<project-ref>.supabase.co/auth/v1/callback`）
 2. Supabase → Authentication → Sign In / Providers → Google を Enable、Client ID / Secret を貼る
-3. Authentication → URL Configuration → Site URL と Redirect URLs に `https://<ユーザー名>.github.io/SARU/`
+3. Authentication → URL Configuration → Site URL に `https://<ユーザー名>.github.io/SARU/`、Redirect URLs に `https://<ユーザー名>.github.io/SARU/` と `https://<ユーザー名>.github.io/SARU/*`
 
 ### 3. config.js
 
@@ -88,6 +89,10 @@ Project Settings → API Keys の **Project URL** と **publishable key**（`sb_
 
 - **決済**（Stripe 等）と、権利を持つユーザーだけ教材を読めるようにする仕組み。現状は教材ファイル（`courses/`）が GitHub Pages 上に公開されているため、URL を直接叩けば誰でも取得できる。有料化時は教材を Supabase（RLS 付きテーブル）や署名付き URL に移す
 - `tokushoho.html` の価格・支払方法・返金条件を確定する
+
+## 公開 URL を変えるとき
+
+`index.html` の `og:url` / `og:image` / `canonical`、`robots.txt` と `sitemap.xml` の URL は `https://aknbot.github.io/SARU/` を直書きしている。独自ドメインに移すときは置換する。
 
 ## ローカルで確認する
 

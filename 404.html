@@ -18,11 +18,16 @@ a.btn{display:inline-block;background:#1F6B4A;color:#fff;text-decoration:none;fo
 <div class="box">
   <h1>ページが見つかりません</h1>
   <p>URL が間違っているか、ページが移動した可能性があります。</p>
-  <a class="btn" href="./">トップへ戻る</a>
+  <a class="btn" id="home" href="/">トップへ戻る</a>
 </div>
 <script>
-// 旧リンク（#/... 形式）はそのままトップへ引き継ぐ
-try{ if(location.hash){ location.replace('./'+location.hash); } }catch(e){}
+/* GitHub Pages のプロジェクトサイト（/リポジトリ名/…）でも、ユーザーサイト（/…）でもトップを正しく指す */
+(function(){
+  var seg=location.pathname.split('/').filter(Boolean);
+  var base = (location.hostname.endsWith('github.io') && seg.length) ? '/'+seg[0]+'/' : '/';
+  var a=document.getElementById('home'); a.href=base;
+  try{ if(location.hash){ location.replace(base+location.hash); } }catch(e){}
+})();
 </script>
 </body>
 </html>

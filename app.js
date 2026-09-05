@@ -58,7 +58,8 @@
   let sb=null, user=null;
   const REQUIRE_LOGIN = SITE.requireLogin !== false;
   const configured = !!(SITE.supabaseUrl && SITE.supabaseAnonKey && !/YOUR-/.test(SITE.supabaseUrl+SITE.supabaseAnonKey));
-  try{ if(configured && window.supabase) sb = window.supabase.createClient(SITE.supabaseUrl, SITE.supabaseAnonKey); }catch(e){ sb=null; }
+  try{ if(configured && window.supabase) sb = window.supabase.createClient(SITE.supabaseUrl, SITE.supabaseAnonKey, { auth:{ flowType:'pkce', detectSessionInUrl:true, persistSession:true, autoRefreshToken:true } }); }catch(e){ sb=null; }
+  const RM = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches:false };
   function gated(){ return REQUIRE_LOGIN && !user; }
   function uid(){ return user ? user.id : 'local'; }
   function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=false; }
@@ -94,10 +95,15 @@
       $$('[data-login]').forEach(b=>b.disabled=true);
       gate.hidden=false; app.hidden=true; return;
     }
+    /* OAuth から ?error= / #error= で戻ってきた場合 */
+    try{ const p=new URLSearchParams(location.search.slice(1) || (location.hash.indexOf('error')>=0 ? location.hash.slice(1) : '')); if(p.get('error')){ gateStatus('ログインできませんでした: '+(p.get('error_description')||p.get('error')), true); history.replaceState(null,'',location.pathname); } }catch(e){}
     try{
-      const { data } = await sb.auth.getSession();
+      const { data, error } = await sb.auth.getSession();
       user = data && data.session ? data.session.user : null;
+      if(user) cacheUser(user);
+      if(!user && error && (!navigator.onLine || error.name==='AuthRetryableFetchError')){ const cached=readCachedUser(); if(cached){ user=cached; offlineSession=true; } }
       sb.auth.onAuthStateChange((ev, session)=>{
+        if(session && session.user){ cacheUser(session.user); offlineSession=false; }
         const was = user && user.id; user = session ? session.user : null;
         if(!user && was && ev==='SIGNED_OUT' && !manualLogout){ gateStatus('セッションの有効期限が切れました。もう一度ログインしてください。', true); }
         if(user && user.id!==was){ onUserChanged(); }
@@ -111,20 +117,25 @@
     /* ログインから戻ってきたら元の場所へ */
     try{ const back=sessionStorage.getItem('kn_return'); if(back){ sessionStorage.removeItem('kn_return'); if(location.search){ history.replaceState(null,'',location.pathname+back); } location.hash=back; route(); } }catch(e){}
   }
-  let manualLogout=false;
+  let manualLogout=false, offlineSession=false;
+  function cacheUser(u){ try{ localStorage.setItem('kn_user', JSON.stringify({ id:u.id, email:u.email, user_metadata:u.user_metadata||{} })); }catch(e){} }
+  function readCachedUser(){ try{ return JSON.parse(localStorage.getItem('kn_user')||'null'); }catch(e){ return null; } }
+  window.addEventListener('online', async()=>{ if(offlineSession && sb){ try{ const { data } = await sb.auth.getSession(); if(data && data.session){ offlineSession=false; user=data.session.user; cacheUser(user); if(course) pullProgress(); } }catch(e){} } });
   async function login(){
     if(!sb){ toast('ログイン機能が利用できません。'); return; }
     const btns=$$('[data-login]'); btns.forEach(b=>b.disabled=true); const lab=$('#gate-login-label'); const old=lab.textContent; lab.textContent='Google へ移動しています…';
-    try{ sessionStorage.setItem('kn_return', location.hash||'#/'); }catch(e){}
-    const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.origin + location.pathname } });
+    try{ sessionStorage.setItem('kn_return', /^#\/[a-z0-9_\/-]*$/.test(location.hash) ? location.hash : '#/'); }catch(e){}
+    const redirectTo = location.origin + location.pathname.replace(/index\.html$/, '');
+    const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo, queryParams:{ prompt:'select_account' } } });
     if(error){ gateStatus('ログインに失敗しました: '+error.message, true); btns.forEach(b=>b.disabled=false); lab.textContent=old; }
   }
   async function logout(){
     if(!sb) return;
     manualLogout=true;
     clearTimeout(saveT); await pushNow();
-    await sb.auth.signOut();
+    await sb.auth.signOut({ scope:'local' });
     manualLogout=false;
+    try{ localStorage.removeItem('kn_user'); }catch(e){}
     user=null; resetCourseState(); started=false; renderAccount(); updateGate(); gateStatus('ログアウトしました。');
     location.hash='#/';
   }
@@ -211,26 +222,35 @@
     if(!navigator.onLine){ setSync('offline','オフライン · 端末に保存中'); pendingPush=true; return; }
     setSync('pend','保存中…'); clearTimeout(saveT); saveT=setTimeout(pushNow, 800);
   }
-  let pendingPush=false, pushing=false;
+  let pendingPush=false, pushing=false, failN=0;
+  const isAuthErr = e => e && (e.status===401 || e.code==='PGRST301' || /JWT/i.test(e.message||''));
+  $('#sync').addEventListener('click', ()=>{ if(!sb||!user||!course) return; failN=0; if(pendingPush||saveT) pushNow(); else pullProgress(); });
   function rowOf(cid, state){ const s=Object.assign({},state); delete s._legacyWrong; return { user_id:user.id, course_id:cid, state:s, updated_at:new Date().toISOString() }; }
   async function pushNow(cid, state){
     if(!sb||!user) return;
     cid=cid||(course&&course.id); state=state||mem; if(!cid) return;
     clearTimeout(saveT); saveT=null;
+    if(!navigator.onLine){ pendingPush=true; if(course&&cid===course.id) setSync('offline','オフライン · 端末に保存中'); return; }
     try{
       pushing=true;
       const { error } = await sb.from('progress').upsert(rowOf(cid,state), { onConflict:'user_id,course_id' });
       if(error) throw error;
-      pendingPush=false;
+      pendingPush=false; failN=0;
       if(course&&cid===course.id) setSync('ok','同期済み');
-    }catch(e){ pendingPush=true; if(course&&cid===course.id) setSync('err','再保存待ち…'); clearTimeout(saveT); saveT=setTimeout(pushNow, 8000); }
+    }catch(e){
+      pendingPush=true; failN++;
+      if(isAuthErr(e) && failN===1){ try{ const r=await sb.auth.refreshSession(); if(!r.error){ pushing=false; return pushNow(cid, state); } }catch(_){} }
+      if(course&&cid===course.id) setSync('err', failN>=5 ? '保存できません · タップで再試行' : '再保存待ち…');
+      if(failN>=5){ toast('進捗を保存できませんでした。通信環境をご確認ください。'); }
+      else { clearTimeout(saveT); saveT=setTimeout(()=>pushNow(cid, state), Math.min(60000, 4000*Math.pow(2, failN))); }
+    }
     finally{ pushing=false; }
   }
   /* ログイン直後：全コースの進捗を取得して端末とマージ（コース一覧の進捗表示のため） */
   async function pullAll(){
     if(!sb||!user) return;
     try{
-      const { data, error } = await sb.from('progress').select('course_id,state');
+      const { data, error } = await sb.from('progress').select('course_id,state').eq('user_id', user.id);
       if(error) throw error;
       (data||[]).forEach(r=>{ if(!LIST.some(c=>c.id===r.course_id)) return; const merged=merge(readLocal(r.course_id), r.state); writeLocal(r.course_id, merged); });
       renderIndex();
@@ -240,7 +260,7 @@
     if(!sb||!user||!course) return;
     setSync('pend','同期中…');
     try{
-      const { data, error } = await sb.from('progress').select('state').eq('course_id', course.id).maybeSingle();
+      const { data, error } = await sb.from('progress').select('state,updated_at').eq('user_id', user.id).eq('course_id', course.id).maybeSingle();
       if(error) throw error;
       const remote = data && data.state ? sanitize(data.state) : null;
       const before=JSON.stringify(mem);
@@ -331,10 +351,14 @@
     else showIndex();
   }
   window.addEventListener('hashchange', route);
+  const VIEW_TITLES={index:'コース一覧', loading:'読み込み中', error:'エラー', home:'今日の学習', notes:'要点ノート', quiz:'問題演習', sched:'合格までの予定', settings:'設定・アカウント'};
   function showView(view){
     $$('.view').forEach(v=>v.classList.toggle('on', v.id==='v-'+view));
-    $$('#nav button').forEach(b=>b.classList.toggle('on', b.dataset.view===view));
+    $$('#nav button').forEach(b=>{ const on=b.dataset.view===view; b.classList.toggle('on', on); if(on) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+    document.title=(VIEW_TITLES[view]||'')+(course?' · '+(course.short||course.title):'')+' · '+SITE_NAME;
     window.scrollTo({top:0});
+    const h=$('#v-'+view+' h2'); if(h && view!=='loading'){ h.setAttribute('tabindex','-1'); try{ h.focus({preventScroll:true}); }catch(e){} }
+    setTop();
   }
   function leaveCourseUI(){ $('#nav').hidden=true; $('#countdown').textContent=''; $('#sync').hidden=true; $('#brand-badge').textContent=''; applyTheme(null); document.title=SITE_NAME; }
   async function showIndex(){
@@ -376,9 +400,9 @@
   }
   async function doLoad(id){
     window.__Q=[]; window.__DS=null; window.__DSQ=null;
-    await Promise.all([ loadScript('courses/'+id+'/questions.js'), loadScript('courses/'+id+'/legacy.js').catch(()=>{}) ]);
-    let dsErr=null; try{ await loadScript('courses/'+id+'/datasets.js'); }catch(e){ dsErr=e; }
-    await loadScript('courses/'+id+'/course.js');
+    const notesP=fetch('courses/'+id+'/notes.html?v='+encodeURIComponent(APP_VERSION), {cache:'no-cache'});
+    let dsErr=null;
+    await Promise.all([ loadScript('courses/'+id+'/questions.js'), loadScript('courses/'+id+'/legacy.js').catch(()=>{}), loadScript('courses/'+id+'/datasets.js').catch(e=>{ dsErr=e; }), loadScript('courses/'+id+'/course.js') ]);
     const c=window.COURSES&&window.COURSES[id]; if(!c) throw new Error('コース定義が見つかりません');
     if(dsErr && c.mock && c.mock.data>0) throw dsErr;
     let qs=window.__Q.slice();
@@ -386,7 +410,7 @@
     const seen={};
     qs.forEach((q,i)=>{ q.idx=i; let h=id+'-'+fnv(q.q); if(seen[h]){ h=id+'-'+fnv(q.q+'#'+i); } seen[h]=1; q.id=h; if(!Array.isArray(q.c)||q.c.length<2||!(q.a>=0&&q.a<q.c.length)) console.error('invalid question', id, i, q); });
     c.questions=qs;
-    const r=await fetch('courses/'+id+'/notes.html?v='+encodeURIComponent(APP_VERSION), {cache:'no-cache'});
+    const r=await notesP;
     if(!r.ok) throw new Error('ノートを読み込めません（'+r.status+'）');
     const html=await r.text(); if(!/<details class="ch"/.test(html)) throw new Error('ノートの内容が不正です');
     c.notesHtml=html;
@@ -396,9 +420,9 @@
     let el=$('#theme-style'); if(!el){ el=document.createElement('style'); el.id='theme-style'; document.head.appendChild(el); }
     if(!t){ el.textContent=''; return; }
     const L=t, D=t.dark||t;
-    el.textContent=':root{--accent:'+L.accent+';--accent-soft:'+L.accentSoft+';--accent-text:'+L.accentText+';--accent-ink:'+L.accentInk+'}'+
-      '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--accent:'+D.accent+';--accent-soft:'+D.accentSoft+';--accent-text:'+D.accentText+';--accent-ink:'+D.accentInk+'}}'+
-      ':root[data-theme="dark"]{--accent:'+D.accent+';--accent-soft:'+D.accentSoft+';--accent-text:'+D.accentText+';--accent-ink:'+D.accentInk+'}';
+    el.textContent=':root:root{--accent:'+L.accent+';--accent-soft:'+L.accentSoft+';--accent-text:'+L.accentText+';--accent-ink:'+L.accentInk+'}'+
+      '@media (prefers-color-scheme: dark){:root:root:not([data-theme="light"]){--accent:'+D.accent+';--accent-soft:'+D.accentSoft+';--accent-text:'+D.accentText+';--accent-ink:'+D.accentInk+'}}'+
+      ':root:root[data-theme="dark"]{--accent:'+D.accent+';--accent-soft:'+D.accentSoft+';--accent-text:'+D.accentText+';--accent-ink:'+D.accentInk+'}';
   }
   let lastCourseId=null, openGen=0;
   async function openCourse(id, view){
@@ -536,7 +560,7 @@
     const flag = (d.n===S[0].n && !store.get('applied',false) && c.plan.exam && todayStr()<=c.plan.exam.apply.card) ? '<span class="chip warn">まず申込</span>' : '';
     $('#today-card').innerHTML=
       '<div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="daynum">STEP '+String(d.n).padStart(2,'0')+' · '+range(d)+(isNow?' · 今ここ':'')+'</span>'+
-      '<span class="row" style="gap:4px"><button class="btn small ghost" id="day-prev" aria-label="前のステップ" '+(homeStep===0?'disabled':'')+'>‹</button><button class="btn small ghost" id="day-next" aria-label="次のステップ" '+(homeStep===S.length-1?'disabled':'')+'>›</button></span></div>'+
+      '<span class="row" style="gap:4px"><button class="btn small ghost icon" id="day-prev" aria-label="前のステップ" '+(homeStep===0?'disabled':'')+'><span aria-hidden="true">‹</span></button><button class="btn small ghost icon" id="day-next" aria-label="次のステップ" '+(homeStep===S.length-1?'disabled':'')+'><span aria-hidden="true">›</span></button></span></div>'+
       '<h2 style="font-size:20px;margin-bottom:4px">'+esc(d.title)+(flag?' '+flag:'')+(d.exam?' <span class="chip aka">本番</span>':'')+'</h2>'+
       '<p class="small muted" style="margin:0">'+esc(d.desc)+'</p><ol class="steps">'+steps+'</ol>'+
       '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-weight:700;cursor:pointer"><input type="checkbox" id="today-done" style="width:20px;height:20px;accent-color:var(--accent)" '+(checks[d.n]?'checked':'')+'> このステップを完了にする</label>';
@@ -551,7 +575,7 @@
   function renderProgress(){
     const S=STEPS(); const checks=store.get('sched',{}); const done=S.filter(d=>checks[d.n]).length;
     if(mem.done!==done || mem.total!==S.length){ mem.done=done; mem.total=S.length; writeLocal(); }
-    $('#prog-bar').style.width=Math.round(done/S.length*100)+'%';
+    $('#prog-bar').style.width=Math.round(done/S.length*100)+'%'; $('#prog-bar-wrap').setAttribute('aria-valuenow', String(Math.round(done/S.length*100)));
     const best=store.get('best',{}); const wrong=poolFor('wrong');
     $('#prog-text').textContent=done+' / '+S.length+' ステップ完了 · 復習リスト '+wrong.length+' 問'+(best.exam?' · 模試ベスト '+best.exam.p+'点':'');
     $('#prog-grid').innerHTML=Object.keys(course.sets).map(n=>{ const b=best[n]; const cls=b?(b.p>=80?'good':b.p<70?'weak':''):''; return '<button class="cell '+cls+'" data-set="'+n+'" type="button" title="'+esc(course.sets[n].t)+'"><div class="n">SET '+n+'</div><div class="s">'+(b?b.p+'%':'—')+'</div><div class="go">'+(b?'もう一度 ›':'解く ›')+'</div></button>'; }).join('');
@@ -561,7 +585,7 @@
     const S=STEPS(); const checks=store.get('sched',{}); const ti=todayIndex();
     $('#sched').innerHTML=S.map((d,i)=>{
       const links=d.read.map(id=>'<button class="btn small" data-ch="'+id+'">'+esc(chapterTitle(id))+'</button>').join('')+(d.set?'<button class="btn small primary" data-set="'+esc(d.set)+'">'+(d.set==='mix'?'総合ランダム':d.set==='wrong'?'復習リスト':'問題セット '+d.set)+'</button>':'');
-      return '<li class="day'+(i===ti?' now':'')+(d.exam?' exam':'')+(checks[d.n]?' done':'')+'"><div class="date"><span>'+Number(d.s.slice(5,7))+'月</span><b>'+Number(d.s.slice(8))+'</b><span>'+(d.s===d.e?'':'〜'+md(d.e))+'</span></div><div><p class="ttl">STEP '+d.n+' · '+esc(d.title)+(d.exam?' <span class="chip aka">本番</span>':'')+(i===ti?' <span class="chip acc">今ここ</span>':'')+'</p><p class="dsc">'+esc(d.desc)+'</p><div class="links">'+links+'</div><label><input type="checkbox" data-day="'+d.n+'" '+(checks[d.n]?'checked':'')+'> 完了</label></div></li>';
+      return '<li class="day'+(i===ti?' now':'')+(d.exam?' exam':'')+(checks[d.n]?' done':'')+'"><div class="date"><span>'+Number(d.s.slice(5,7))+'月</span><b>'+Number(d.s.slice(8))+'</b><span>'+(d.s===d.e?'':'〜'+md(d.e))+'</span></div><div><p class="ttl">STEP '+d.n+' · '+esc(d.title)+(d.exam?' <span class="chip aka">本番</span>':'')+(i===ti?' <span class="chip acc">今ここ</span>':'')+'</p><p class="dsc">'+esc(d.desc)+'</p><div class="links">'+links+'</div><label><input type="checkbox" data-day="'+d.n+'" aria-label="STEP '+d.n+' '+esc(d.title)+' を完了にする" '+(checks[d.n]?'checked':'')+'> 完了</label></div></li>';
     }).join('');
     $$('#sched input[type=checkbox]').forEach(cb=>cb.addEventListener('change', e=>setStepDone(e.target.dataset.day, e.target.checked)));
   }
@@ -574,7 +598,7 @@
     if($('#v-notes').classList.contains('on')){ scrollToChapter(id); return; }
     pendingChapter=id; location.hash='#/c/'+course.id+'/notes';
   }
-  function scrollToChapter(id){ const d=$('#'+id); if(!d) return; d.open=true; setTimeout(()=>d.scrollIntoView({behavior:'smooth', block:'start'}), 60); }
+  function scrollToChapter(id){ const d=$('#'+id); if(!d) return; d.open=true; setTimeout(()=>{ const sm=$('summary', d); if(sm){ sm.setAttribute('tabindex','-1'); try{ sm.focus({preventScroll:true}); }catch(e){} } d.scrollIntoView({behavior: RM.matches?'auto':'smooth', block:'start'}); }, 60); }
   const _showView=showView;
   showView=function(view){ _showView(view); if(view==='notes' && pendingChapter){ const id=pendingChapter; pendingChapter=null; setTimeout(()=>scrollToChapter(id), 30); } };
 
@@ -587,15 +611,21 @@
   function renderNotes(){
     const dst=$('#notes'); dst.innerHTML=course.notesHtml||'';
     const src=$('#notes-src', dst); if(src){ while(src.firstChild) dst.appendChild(src.firstChild); src.remove(); }
-    $$('.k', dst).forEach(k=>{ k.setAttribute('tabindex','0'); k.setAttribute('role','button'); });
+    $$('summary .arrow', dst).forEach(a=>a.setAttribute('aria-hidden','true'));
+    $$('.tw', dst).forEach(t=>{ t.setAttribute('tabindex','0'); t.setAttribute('role','region'); t.setAttribute('aria-label','表（横にスクロールできます）'); });
+    syncSheetA11y();
     $('#chapnav').innerHTML=$$('details.ch', dst).map(d=>'<a href="#" data-ch="'+d.id+'">'+esc($('summary .num',d).childNodes[0].textContent.trim())+' '+esc(chapterTitle(d.id))+'</a>').join('');
   }
-  function applySheet(){ const sheet=$('#sheet'); const on=!!store.get('sheet', false); sheet.checked=on; $('#notes').classList.toggle('sheet-on', on); $('#sheet-all-show').disabled=$('#sheet-all-hide').disabled=!on; }
-  $('#sheet').addEventListener('change', ()=>{ const on=$('#sheet').checked; $('#notes').classList.toggle('sheet-on', on); store.set('sheet', on); $$('.k.show', $('#notes')).forEach(k=>k.classList.remove('show')); $('#sheet-all-show').disabled=$('#sheet-all-hide').disabled=!on; toast(on?'赤シート ON。隠れた語句はタップで表示できます。':'赤シート OFF'); });
-  $('#notes').addEventListener('click', e=>{ const k=e.target.closest('.k'); if(k && $('#notes').classList.contains('sheet-on')) k.classList.toggle('show'); });
-  $('#notes').addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target.classList && e.target.classList.contains('k') && $('#notes').classList.contains('sheet-on')){ e.preventDefault(); e.target.classList.toggle('show'); } });
-  $('#sheet-all-show').addEventListener('click', ()=>$$('.k', $('#notes')).forEach(k=>k.classList.add('show')));
-  $('#sheet-all-hide').addEventListener('click', ()=>$$('.k', $('#notes')).forEach(k=>k.classList.remove('show')));
+  const notesRoot=$('#v-notes');
+  function sheetOn(){ return notesRoot.classList.contains('sheet-on'); }
+  function syncSheetA11y(){ const on=sheetOn(); $$('.k', notesRoot).forEach(k=>{ if(on){ k.setAttribute('role','button'); k.setAttribute('tabindex','0'); k.setAttribute('aria-pressed', String(k.classList.contains('show'))); } else { k.removeAttribute('role'); k.removeAttribute('tabindex'); k.removeAttribute('aria-pressed'); } }); const st=$('#sheet-state'); if(st) st.textContent=on?'ON':'OFF'; $('#sheet-all-show').disabled=$('#sheet-all-hide').disabled=!on; }
+  function toggleK(k){ k.classList.toggle('show'); k.setAttribute('aria-pressed', String(k.classList.contains('show'))); }
+  function applySheet(){ const sheet=$('#sheet'); const on=!!store.get('sheet', false); sheet.checked=on; notesRoot.classList.toggle('sheet-on', on); syncSheetA11y(); }
+  $('#sheet').addEventListener('change', ()=>{ const on=$('#sheet').checked; notesRoot.classList.toggle('sheet-on', on); store.set('sheet', on); $$('.k.show', notesRoot).forEach(k=>k.classList.remove('show')); syncSheetA11y(); toast(on?'赤シート ON。隠れた語句はタップで表示できます。':'赤シート OFF'); });
+  notesRoot.addEventListener('click', e=>{ const k=e.target.closest('.k'); if(k && sheetOn()) toggleK(k); });
+  notesRoot.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target.classList && e.target.classList.contains('k') && sheetOn()){ e.preventDefault(); toggleK(e.target); } });
+  $('#sheet-all-show').addEventListener('click', ()=>$$('.k', notesRoot).forEach(k=>{ k.classList.add('show'); k.setAttribute('aria-pressed','true'); }));
+  $('#sheet-all-hide').addEventListener('click', ()=>$$('.k', notesRoot).forEach(k=>{ k.classList.remove('show'); k.setAttribute('aria-pressed','false'); }));
 
   /* =================== 問題 =================== */
   const quiz={active:false};
@@ -613,13 +643,13 @@
     const todaySet=STEPS()[todayIndex()].set;
     if(pre) pick.key=String(pre); else if(!pick.key) pick.key=String(todaySet||1);
     if(pick.key==='wrong' && !wrong.length) pick.key='mix';
-    const cells=Object.keys(course.sets).map(n=>{ const b=best[n]; const cnt=poolFor(n).length; return '<button type="button" class="setbtn'+(pick.key===n?' sel':'')+'" data-pick="'+n+'"><span class="n">SET '+n+(String(todaySet)===n?' · 今':'')+'</span><span class="t">'+esc(course.sets[n].t)+'</span><span class="s">'+cnt+'問'+(b?' · ベスト '+b.p+'%':' · 10問から始める')+'</span></button>'; }).join('');
+    const cells=Object.keys(course.sets).map(n=>{ const b=best[n]; const cnt=poolFor(n).length; return '<button type="button" class="setbtn'+(pick.key===n?' sel':'')+'" data-pick="'+n+'" aria-pressed="'+(pick.key===n)+'"><span class="n">SET '+n+(String(todaySet)===n?' · 今':'')+'</span><span class="t">'+esc(course.sets[n].t)+'</span><span class="s">'+cnt+'問'+(b?' · ベスト '+b.p+'%':' · 10問から始める')+'</span></button>'; }).join('');
     const saved=loadSavedExam();
     $('#quiz').innerHTML=
       (saved?'<div class="card" style="border-color:var(--accent)"><p class="eyebrow">中断中の模試</p><div class="row" style="justify-content:space-between"><span class="small">解答済 '+saved.ans.filter(a=>a!==null).length+' / '+saved.ids.length+' 問 · 残り '+fmtLeft(saved.end)+'</span><span class="row" style="gap:6px"><button type="button" class="btn small" id="exam-discard">破棄</button><button type="button" class="btn small primary" id="exam-resume">再開する</button></span></div></div>':'')+
       '<div class="card"><p class="eyebrow">セット</p><div class="setgrid">'+cells+
-      '<button type="button" class="setbtn wide'+(pick.key==='mix'?' sel':'')+'" data-pick="mix"><span class="n">MIX</span><span class="t">総合ランダム（全範囲から出題）</span><span class="s">'+Q().length+'問から</span></button>'+
-      '<button type="button" class="setbtn wide'+(pick.key==='wrong'?' sel':'')+'" data-pick="wrong" '+(wrong.length?'':'disabled')+'><span class="n">REVIEW</span><span class="t">復習リスト（間違えた問題）</span><span class="s">'+(wrong.length?wrong.length+'問':'間違えた問題が自動でここに溜まります')+'</span></button>'+
+      '<button type="button" class="setbtn wide'+(pick.key==='mix'?' sel':'')+'" data-pick="mix" aria-pressed="'+(pick.key==='mix')+'"><span class="n">MIX</span><span class="t">総合ランダム（全範囲から出題）</span><span class="s">'+Q().length+'問から</span></button>'+
+      '<button type="button" class="setbtn wide'+(pick.key==='wrong'?' sel':'')+'" data-pick="wrong" aria-pressed="'+(pick.key==='wrong')+'" '+(wrong.length?'':'disabled')+'><span class="n">REVIEW</span><span class="t">復習リスト（間違えた問題）</span><span class="s">'+(wrong.length?wrong.length+'問':'間違えた問題が自動でここに溜まります')+'</span></button>'+
       '</div></div>'+
       (course.mock?'<div class="card" style="border-color:var(--accent)"><p class="eyebrow">模擬試験</p><h2 style="font-size:18px">模擬試験（本番形式）</h2><p class="small muted" style="margin:0 0 10px">'+esc(course.mock.desc||'')+'</p><div class="row" style="justify-content:space-between"><span class="small mono">'+(course.mock.minutes)+'分 · '+(course.mock.tf+course.mock.single+course.mock.data)+'問'+(best.exam?' · ベスト '+best.exam.p+'点':'')+'</span><button type="button" class="btn primary" id="exam-start">模試を始める</button></div></div>':'')+
       '<div class="card"><p class="eyebrow">出題数</p><div class="row" style="justify-content:space-between"><div class="seg" role="group" aria-label="出題数">'+[10,20,0].map(c=>'<button type="button" data-count="'+c+'" class="'+(pick.count===c?'on':'')+'" aria-pressed="'+(pick.count===c)+'">'+(c===0?'全部':c+'問')+'</button>').join('')+'</div><button type="button" class="btn primary" id="start">開始</button></div><p class="small muted" style="margin:10px 0 0">選択肢は毎回シャッフルされます。間違えた問題は自動で復習リストに入り、正解すると外れます。</p></div>';
@@ -632,7 +662,7 @@
   }
 
   /* =================== 模擬試験モード =================== */
-  const exam={active:false, timer:null};
+  const exam={active:false, timer:null}; let gridOpen=false; let warned={};
   function fmtLeft(end){ const left=Math.max(0,end-Date.now()); return String(Math.floor(left/60000)).padStart(2,'0')+':'+String(Math.floor(left%60000/1000)).padStart(2,'0'); }
   function examKey(){ return 'kn_exam_'+uid()+'_'+course.id; }
   function saveExam(){ if(!exam.active) return; try{ sessionStorage.setItem(examKey(), JSON.stringify({ ids:exam.list.map(q=>q.id), ans:exam.ans, order:exam.order, end:exam.end, sec:exam.sec, pos:exam.pos })); }catch(e){} }
@@ -650,6 +680,7 @@
   function startExam(){
     const cfg=course.mock; const b=buildExamList();
     if(!b.list.length){ toast('模試を作成できる問題数が不足しています。'); return; }
+    warned={};
     Object.assign(exam,{active:true, list:b.list, pos:0, ans:new Array(b.list.length).fill(null), order:b.list.map(q=>orderFor(q)), end:Date.now()+cfg.minutes*60000, sec:b.sec});
     quiz.active=true; saveExam();
     clearInterval(exam.timer); exam.timer=setInterval(tick, 1000);
@@ -666,21 +697,23 @@
     renderExamQ();
   }
   function orderFor(q){ const o=q.c.map((_,i)=>i); return q.f?o:shuffle(o); }
-  function tick(){ if(!exam.active) return; const el=$('#exam-timer'); const left=Math.max(0, exam.end-Date.now()); if(el){ el.textContent=fmtLeft(exam.end); el.classList.toggle('warn', left<10*60000); } if(left<=0){ clearInterval(exam.timer); toast('時間切れです。採点します。'); finishExam(); } }
+  function tick(){ if(!exam.active) return; const el=$('#exam-timer'); const left=Math.max(0, exam.end-Date.now()); if(el){ el.textContent=fmtLeft(exam.end); el.classList.toggle('warn', left<10*60000); } [10,5,1].forEach(m=>{ if(left<=m*60000 && left>0 && !warned[m]){ warned[m]=true; toast('残り'+m+'分です。'); } }); if(left<=0){ clearInterval(exam.timer); toast('時間切れです。採点します。'); finishExam(); } }
   function secName(i){ return i<exam.sec.tf?'Ⅰ 正誤判定':i<exam.sec.tf+exam.sec.single?'Ⅱ 個別問題':'Ⅲ 総合問題'; }
   function renderExamQ(){
     if(!exam.active) return;
     if(exam.end-Date.now()<=0){ tick(); return; }
     const i=exam.pos, q=exam.list[i], order=exam.order[i], answered=exam.ans.filter(a=>a!==null).length;
     $('#quiz').innerHTML=
-      '<div class="card"><div class="qhead"><span class="chip aka">模擬試験 · '+secName(i)+'</span><span class="prog"><span id="exam-timer" class="timer"></span> · '+(i+1)+' / '+exam.list.length+'</span></div>'+
+      '<div class="card"><div class="qhead"><span class="chip aka">模擬試験 · '+secName(i)+'</span><span class="prog"><span id="exam-timer" class="timer" role="timer" aria-label="残り時間"></span><span aria-hidden="true"> · </span><span class="sr">第</span>'+(i+1)+' / '+exam.list.length+'<span class="sr">問</span></span></div>'+
       dsPanel(q)+'<p class="qtext">'+esc(q.q)+'</p>'+
-      '<ul class="choices">'+order.map((ci,k)=>'<li><button type="button" class="choice'+(exam.ans[i]===ci?' sel':'')+'" data-ci="'+ci+'" data-l="'+LETTERS[k]+'" aria-pressed="'+(exam.ans[i]===ci)+'">'+esc(q.c[ci])+'</button></li>').join('')+'</ul>'+
+      '<ul class="choices" role="radiogroup" aria-label="選択肢">'+order.map((ci,k)=>'<li><button type="button" class="choice'+(exam.ans[i]===ci?' sel':'')+'" data-ci="'+ci+'" data-l="'+LETTERS[k]+'" role="radio" aria-checked="'+(exam.ans[i]===ci)+'">'+esc(q.c[ci])+'</button></li>').join('')+'</ul>'+
       '<div class="row" style="justify-content:space-between;margin-top:14px"><button type="button" class="btn small" id="ex-prev" '+(i===0?'disabled':'')+'>‹ 前へ</button><span class="small muted mono">解答済 '+answered+'/'+exam.list.length+'</span><button type="button" class="btn small" id="ex-next" '+(i===exam.list.length-1?'disabled':'')+'>次へ ›</button></div>'+
-      '<div class="examgrid" id="ex-grid" aria-label="問題番号">'+exam.list.map((_,k)=>'<button type="button" class="'+(exam.ans[k]!==null?'done':'')+(k===i?' cur':'')+'" data-go="'+k+'" aria-label="第'+(k+1)+'問'+(exam.ans[k]!==null?'（解答済）':'')+'">'+(k+1)+'</button>').join('')+'</div>'+
+      '<details class="ds" '+(gridOpen?'open':'')+' id="ex-grid-wrap"><summary>問題一覧（解答済 '+answered+' / '+exam.list.length+'）</summary><div class="examgrid" id="ex-grid" role="group" aria-label="問題番号" style="padding:0 10px 10px">'+exam.list.map((_,k)=>'<button type="button" class="'+(exam.ans[k]!==null?'done':'')+(k===i?' cur':'')+'" data-go="'+k+'" aria-label="第'+(k+1)+'問 '+(exam.ans[k]!==null?'解答済':'未解答')+'" '+(k===i?'aria-current="true"':'')+'>'+(k+1)+'</button>').join('')+'</div></details>'+
       '<div class="row" style="justify-content:space-between;margin-top:14px"><button type="button" class="btn ghost small" id="ex-quit">中断</button><button type="button" class="btn primary" id="ex-finish">採点する</button></div></div>';
     tick();
-    $$('#quiz .choice').forEach(b=>b.addEventListener('click', ()=>{ exam.ans[i]=Number(b.dataset.ci); $$('#quiz .choice').forEach(x=>{ x.classList.toggle('sel', x===b); x.setAttribute('aria-pressed', String(x===b)); }); const g=$$('#ex-grid button')[i]; if(g) g.classList.add('done'); saveExam(); const next=i+1; setTimeout(()=>{ if(exam.active && exam.pos===i && next<exam.list.length){ exam.pos=next; renderExamQ(); } }, 250); }));
+    const qt=$('#quiz .qtext'); if(qt){ qt.setAttribute('tabindex','-1'); try{ qt.focus({preventScroll:true}); }catch(e){} }
+    const gw=$('#ex-grid-wrap'); if(gw) gw.addEventListener('toggle', ()=>{ gridOpen=gw.open; });
+    $$('#quiz .choice').forEach(b=>b.addEventListener('click', ()=>{ exam.ans[i]=Number(b.dataset.ci); $$('#quiz .choice').forEach(x=>{ x.classList.toggle('sel', x===b); x.setAttribute('aria-checked', String(x===b)); }); const g=$$('#ex-grid button')[i]; if(g) g.classList.add('done'); saveExam(); const next=i+1; setTimeout(()=>{ if(exam.active && exam.pos===i && next<exam.list.length){ exam.pos=next; renderExamQ(); } }, 250); }));
     $('#ex-prev').addEventListener('click', ()=>{ exam.pos--; saveExam(); renderExamQ(); });
     $('#ex-next').addEventListener('click', ()=>{ exam.pos++; saveExam(); renderExamQ(); });
     $$('#ex-grid button').forEach(b=>b.addEventListener('click', ()=>{ exam.pos=Number(b.dataset.go); saveExam(); renderExamQ(); }));
@@ -705,8 +738,9 @@
     const rw=$('#retry-wrong'); if(rw) rw.addEventListener('click', ()=>{ Object.assign(quiz,{active:true, key:'wrong', retry:true, list:shuffle(wrongQ.slice()), pos:0, correct:0, wrongQ:[]}); renderQuestion(); });
     $('#exam-again').addEventListener('click', startExam);
     $('#back').addEventListener('click', ()=>renderSetPicker());
-    renderProgress(); window.scrollTo({top:0});
+    renderProgress(); window.scrollTo({top:0}); focusResult();
   }
+  function focusResult(){ const s=$('#quiz .score'); if(s){ s.setAttribute('tabindex','-1'); s.setAttribute('role','status'); try{ s.focus({preventScroll:true}); }catch(e){} } }
   function startQuiz(key, count){
     abortExam();
     let pool=shuffle(poolFor(key));
@@ -725,20 +759,21 @@
       dsPanel(q)+(q.adv?'<span class="chip adv">発展（2級範囲）</span>':'')+
       '<p class="qtext">'+esc(q.q)+'</p>'+
       '<ul class="choices">'+order.map((ci,i)=>'<li><button type="button" class="choice" data-ci="'+ci+'" data-l="'+LETTERS[i]+'">'+esc(q.c[ci])+'</button></li>').join('')+'</ul>'+
-      '<div id="verdict" aria-live="polite"></div>'+
+      '<div id="verdict" role="status" aria-live="polite" tabindex="-1"></div>'+
       '<div class="row" style="justify-content:space-between;margin-top:14px"><button type="button" class="btn ghost small" id="quit">やめる</button><button type="button" class="btn primary" id="next" style="display:none">'+(quiz.pos+1===quiz.list.length?'結果を見る':'次へ')+'</button></div></div>';
-    $$('#quiz .choice').forEach(b=>b.addEventListener('click', ()=>answer(q, Number(b.dataset.ci), b)));
+    const qt2=$('#quiz .qtext'); if(qt2){ qt2.setAttribute('tabindex','-1'); try{ qt2.focus({preventScroll:true}); }catch(e){} }
+    $$('#quiz .choice').forEach(b=>b.addEventListener('click', ()=>{ if(b.getAttribute('aria-disabled')==='true') return; answer(q, Number(b.dataset.ci), b); }));
     $('#quit').addEventListener('click', async()=>{ if(quiz.pos>0 && !(await ask({title:'ドリルを終了しますか？', body:'ここまでの正誤は復習リストに反映済みです。', ok:'終了する'}))) return; quiz.active=false; renderSetPicker(); });
     $('#next').addEventListener('click', ()=>{ quiz.pos++; if(quiz.pos>=quiz.list.length) renderResult(); else renderQuestion(); window.scrollTo({top:0}); });
   }
   function answer(q, ci, btn){
     const ok = ci===q.a;
-    $$('#quiz .choice').forEach(b=>{ b.disabled=true; const c=Number(b.dataset.ci); if(c===q.a) b.classList.add('correct'); else if(b===btn) b.classList.add('wrong'); else b.classList.add('dim'); });
+    $$('#quiz .choice').forEach(b=>{ b.setAttribute('aria-disabled','true'); b.classList.add('answered'); const c=Number(b.dataset.ci); if(c===q.a) b.classList.add('correct'); else if(b===btn) b.classList.add('wrong'); else b.classList.add('dim'); });
     const wrong=Object.assign({},store.get('wrong',{})), cleared=Object.assign({},store.get('cleared',{})); const now=Date.now();
     if(ok){ quiz.correct++; delete wrong[q.id]; cleared[q.id]=now; } else { quiz.wrongQ.push(q); wrong[q.id]=now; }
     mem.wrong=wrong; mem.cleared=cleared; touch();
     $('#verdict').innerHTML='<div class="verdict '+(ok?'ok':'ng')+'"><b class="h">'+(ok?'正解':'不正解 · 正解は「'+esc(q.c[q.a])+'」')+'</b>'+esc(q.e)+'</div>';
-    const n=$('#next'); n.style.display=''; n.focus({preventScroll:true});
+    const n=$('#next'); n.style.display=''; try{ $('#verdict').focus({preventScroll:true}); }catch(e){}
   }
   function renderResult(){
     quiz.active=false;
@@ -755,7 +790,7 @@
     const rw=$('#retry-wrong'); if(rw) rw.addEventListener('click', ()=>{ Object.assign(quiz,{active:true, key:quiz.key, retry:true, list:shuffle(quiz.wrongQ.slice()), pos:0, correct:0, wrongQ:[]}); renderQuestion(); });
     $('#retry-same').addEventListener('click', ()=>startQuiz(quiz.key, pick.count));
     $('#back').addEventListener('click', ()=>renderSetPicker());
-    renderProgress(); window.scrollTo({top:0});
+    renderProgress(); window.scrollTo({top:0}); focusResult();
   }
 
   /* =================== 設定・アカウント =================== */
@@ -821,8 +856,10 @@
 
   /* =================== 起動 =================== */
   function setTop(){ const h=$('.top'); if(h) document.documentElement.style.setProperty('--toph', h.offsetHeight+'px'); }
-  setTop(); window.addEventListener('resize', setTop); window.addEventListener('load', setTop); setTimeout(setTop, 800);
-  if('serviceWorker' in navigator && location.protocol==='https:' && SITE.serviceWorker!==false){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+  setTop(); window.addEventListener('resize', setTop); window.addEventListener('load', setTop);
+  try{ new ResizeObserver(setTop).observe($('.top')); }catch(e){ setTimeout(setTop, 800); }
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(setTop);
+  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost') && SITE.serviceWorker!==false){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
   /* テスト・デバッグ用の公開API（副作用なし） */
   window.KN = Object.freeze({ version: APP_VERSION, merge, sanitize, buildPlan: (c,p)=>buildPlan(c,p) });
   initAuth();

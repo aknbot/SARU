@@ -44,6 +44,7 @@ async function page(opts = {}) {
   const errors = [];
   p.on('pageerror', e => errors.push('pageerror: ' + e.message));
   p.on('console', m => { if (m.type() === 'error' && !/net::ERR|Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
+  p.on('response', r => { try { if (r.url().startsWith(origin) && r.status() >= 400) errors.push('http ' + r.status() + ' ' + r.url().slice(origin.length)); } catch {} });
   await p.route(/supabase(\.min)?\.js/, r => r.fulfill({ contentType: 'text/javascript', body: FAKE_SUPABASE }));
   await p.route(/supabase\.co/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));

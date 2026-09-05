@@ -11,7 +11,11 @@
 <meta property="og:title" content="検定ノート">
 <meta property="og:description" content="ビジネス会計検定 3級・2級の合格コース。要点ノート・一問一答・模擬試験・学習予定をひとつに。">
 <meta property="og:type" content="website">
-<meta property="og:image" content="assets/icons/icon-512.png">
+<meta property="og:url" content="https://aknbot.github.io/SARU/">
+<meta property="og:image" content="https://aknbot.github.io/SARU/assets/icons/icon-512.png">
+<meta name="twitter:card" content="summary">
+<link rel="canonical" href="https://aknbot.github.io/SARU/">
+<meta name="apple-mobile-web-app-title" content="検定ノート">
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -46,12 +50,13 @@
           <span id="gate-login-label">Googleでログインして始める</span>
         </button>
         <p class="hero-note" id="gate-status" role="status" aria-live="polite">ログイン状態を確認しています…</p>
+        <p class="hero-note">ログインすると<a href="terms.html">利用規約</a>と<a href="privacy.html">プライバシーポリシー</a>に同意したものとみなされます。</p>
       </div>
       <p class="note" id="gate-note" hidden></p>
     </section>
 
     <section class="feat">
-      <p class="eyebrow">Features</p>
+      <p class="eyebrow" lang="en">Features</p>
       <h2>合格に必要なものだけ</h2>
       <div class="feat-grid">
         <div class="feat-card"><div class="ic" aria-hidden="true">📖</div><h3>赤シート付き要点ノート</h3><p>公式テキストの章立てに沿った要点を、用語と計算式を隠しながら読める。タップで一つずつ確認。</p></div>
@@ -62,27 +67,27 @@
     </section>
 
     <section class="courses-preview">
-      <p class="eyebrow">Courses</p>
+      <p class="eyebrow" lang="en">Courses</p>
       <h2>コース</h2>
       <div class="stack" id="gate-course-list"></div>
       <p class="small muted">試験日程・受験料などの最新情報は必ず<a href="https://www.b-accounting.jp/" target="_blank" rel="noopener">公式サイト</a>でご確認ください。</p>
     </section>
 
     <section class="how">
-      <p class="eyebrow">How it works</p>
+      <p class="eyebrow" lang="en">How it works</p>
       <h2>使い方は3ステップ</h2>
       <ol class="how-list">
-        <li><b>Googleでログイン</b><span>メールアドレスと表示名だけをお預かりします。</span></li>
+        <li><b>Googleでログイン</b><span>お預かりするのは Google アカウントのメールアドレス・表示名・プロフィール画像だけです。</span></li>
         <li><b>コースを選ぶ</b><span>3級・2級から。併願なら両方。</span></li>
         <li><b>今日のステップをこなす</b><span>ノート15分・問題10分・復習5分。毎日30分で合格ラインへ。</span></li>
       </ol>
     </section>
 
     <section class="faq">
-      <p class="eyebrow">FAQ</p>
+      <p class="eyebrow" lang="en">FAQ</p>
       <h2>よくある質問</h2>
       <details><summary>料金はかかりますか？</summary><p>現在は無料でご利用いただけます。有料プランを開始する際は、事前にお知らせします。</p></details>
-      <details><summary>公式の教材ですか？</summary><p>いいえ。本サービスは大阪商工会議所および「ビジネス会計検定試験®」とは関係のない、独自の学習教材です。試験の申込・日程・受験料は公式サイトでご確認ください。</p></details>
+      <details><summary>公式の教材ですか？</summary><p>いいえ。本サービスは大阪商工会議所および「ビジネス会計検定試験®」とは関係のない、独自の学習教材です。公式テキスト・公式過去問題集の本文は転載していません。試験の申込・日程・受験料は公式サイトでご確認ください。</p></details>
       <details><summary>スマホでも使えますか？</summary><p>使えます。ホーム画面に追加するとアプリのように開けます。進捗はログインしたすべての端末で同期されます。</p></details>
       <details><summary>データはどう扱われますか？</summary><p>お預かりするのは Google アカウントのメールアドレス・表示名・プロフィール画像と、学習の進捗だけです。アカウントはいつでもアプリ内から削除できます。詳しくは<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</p></details>
     </section>
@@ -95,7 +100,7 @@
 </div>
 
 <!-- ===== アプリ本体 ===== -->
-<div class="app" id="app" hidden>
+<main class="app" id="app" hidden>
   <header class="top">
     <h1 class="brand"><a href="#/" id="brand-link">検定ノート</a><small id="brand-badge"></small></h1>
     <div class="right">
@@ -132,13 +137,13 @@
   <!-- 読み込み中 / エラー -->
   <section class="view" id="v-loading" aria-busy="true">
     <p class="eyebrow">読み込み中</p>
-    <h2 id="loading-title">教材を読み込んでいます…</h2>
+    <h2 tabindex="-1" id="loading-title">教材を読み込んでいます…</h2>
     <div class="card skel"></div>
     <div class="card skel" style="height:110px"></div>
   </section>
   <section class="view" id="v-error">
     <p class="eyebrow">エラー</p>
-    <h2>教材を読み込めませんでした</h2>
+    <h2 tabindex="-1">教材を読み込めませんでした</h2>
     <div class="card">
       <p class="small muted" id="error-detail">通信環境をご確認のうえ、もう一度お試しください。</p>
       <div class="row"><button type="button" class="btn primary" id="error-retry">再読み込み</button><a class="btn ghost" href="#/">コース一覧へ</a></div>
@@ -148,7 +153,7 @@
   <!-- 今日 -->
   <section class="view" id="v-home">
     <p class="eyebrow">今日</p>
-    <h2 id="home-title">今日の学習</h2>
+    <h2 tabindex="-1" id="home-title">今日の学習</h2>
     <div id="plan-notice"></div>
     <div class="card today" id="today-card"></div>
     <div id="deadline-card"></div>
@@ -160,7 +165,7 @@
     <div class="card">
       <p class="eyebrow">進み具合</p>
       <h2 style="font-size:19px">進み具合</h2>
-      <div class="bar" style="margin:6px 0 12px"><i id="prog-bar"></i></div>
+      <div class="bar" style="margin:6px 0 12px" role="progressbar" aria-label="ステップ進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="prog-bar-wrap"><i id="prog-bar"></i></div>
       <p class="small muted" id="prog-text" style="margin:0 0 10px"></p>
       <div class="grid10" id="prog-grid"></div>
       <p class="small muted" style="margin:10px 0 0">赤＝正答率7割未満（ノートを読み直す）、緑＝8割以上。セルをタップするとそのセットを解けます。</p>
@@ -170,11 +175,11 @@
   <!-- ノート -->
   <section class="view" id="v-notes">
     <p class="eyebrow">ノート</p>
-    <h2>要点ノート</h2>
+    <h2 tabindex="-1">要点ノート</h2>
     <p class="small muted" style="margin:0 0 6px" id="notes-intro"></p>
     <div class="notes-tools">
       <div class="sheet-toggle">
-        <label class="switch"><input type="checkbox" id="sheet"> 赤シート</label>
+        <label class="switch"><input type="checkbox" id="sheet" role="switch"> 赤シート <span class="small muted" id="sheet-state" aria-hidden="true">OFF</span></label>
         <div class="row" style="gap:6px">
           <button class="btn small" id="sheet-all-show" type="button">全部表示</button>
           <button class="btn small" id="sheet-all-hide" type="button">全部隠す</button>
@@ -188,14 +193,14 @@
   <!-- 問題 -->
   <section class="view" id="v-quiz">
     <p class="eyebrow">問題</p>
-    <h2>問題演習</h2>
+    <h2 tabindex="-1">問題演習</h2>
     <div id="quiz"></div>
   </section>
 
   <!-- 予定 -->
   <section class="view" id="v-sched">
     <p class="eyebrow">予定</p>
-    <h2 id="sched-title">合格までの予定</h2>
+    <h2 tabindex="-1" id="sched-title">合格までの予定</h2>
     <p class="small muted" style="margin:0 0 12px" id="sched-note"></p>
     <div id="sched-info"></div>
     <ol class="sched" id="sched"></ol>
@@ -204,7 +209,7 @@
   <!-- 設定 -->
   <section class="view settings" id="v-settings">
     <p class="eyebrow">設定</p>
-    <h2>設定・アカウント</h2>
+    <h2 tabindex="-1">設定・アカウント</h2>
     <div class="card" id="settings-account"></div>
     <div class="card">
       <h3 style="margin-top:0">バックアップ（上級者向け）</h3>
@@ -232,7 +237,7 @@
       <p style="margin:0" id="version-line"></p>
     </div>
   </section>
-</div>
+</main>
 
 <nav class="nav" id="nav" aria-label="メイン" hidden>
   <button type="button" data-view="home" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>今日</button>
