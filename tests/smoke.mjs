@@ -84,6 +84,19 @@ async function page(opts = {}) {
   check('verdict shown', !!(await p.$('#quiz .verdict')));
   const nextVisible = await p.evaluate(() => getComputedStyle(document.querySelector('#next')).display !== 'none');
   check('next button visible after answer', nextVisible);
+  // 解説からノートの見出しへ飛べる
+  const ref = await p.$('#quiz .ref a[data-ch]'); check('note reference link shown in verdict', !!ref);
+  if (ref) {
+    await ref.click(); await p.waitForTimeout(400);
+    const st = await p.evaluate(() => { const on = document.querySelector('.view.on')?.id; const a = document.querySelector('#chapnav a.on'); const d = a && document.getElementById(a.dataset.ch); return { on, open: !!(d && d.open) }; });
+    check('reference opens the chapter in notes', st.on === 'v-notes' && st.open, JSON.stringify(st));
+  }
+  // ノート内検索
+  await p.fill('#nsearch', '減価償却'); await p.waitForTimeout(500);
+  const sr = await p.evaluate(() => ({ hits: document.querySelectorAll('#notes mark.hit').length, count: document.querySelector('#nsearch-count').textContent, openHit: !!document.querySelector('#notes mark.hit')?.closest('details.ch')?.open }));
+  check('note search highlights matches and opens the chapter', sr.hits > 0 && /件/.test(sr.count) && sr.openHit, JSON.stringify(sr));
+  await p.fill('#nsearch', ''); await p.waitForTimeout(400);
+  check('note search clears', (await p.$$('#notes mark.hit')).length === 0);
   await p.click('#nav button[data-view="sched"]'); await p.waitForTimeout(300);
   check('schedule rendered', (await p.$$('#sched .day')).length >= 10);
   check('plan form present', !!(await p.$('#plan-round')) && !!(await p.$('#plan-apply')));

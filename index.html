@@ -23,12 +23,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap"></noscript>
-<link rel="stylesheet" href="app.css?v=2.1.3">
-<script src="vendor/supabase.js?v=2.1.3" defer></script>
-<script src="config.js?v=2.1.3" defer></script>
-<script src="exams.js?v=2.1.3" defer></script>
-<script src="courses.js?v=2.1.3" defer></script>
-<script src="app.js?v=2.1.3" defer></script>
+<link rel="stylesheet" href="app.css?v=2.2.0">
+<script src="vendor/supabase.js?v=2.2.0" defer></script>
+<script src="config.js?v=2.2.0" defer></script>
+<script src="exams.js?v=2.2.0" defer></script>
+<script src="courses.js?v=2.2.0" defer></script>
+<script src="app.js?v=2.2.0" defer></script>
 </head>
 <body>
 
@@ -189,6 +189,11 @@
           <button class="btn small" id="sheet-all-show" type="button">全部表示</button>
           <button class="btn small" id="sheet-all-hide" type="button">全部隠す</button>
         </div>
+      </div>
+      <div class="nsearch" role="search">
+        <input type="search" id="nsearch" placeholder="ノート内を検索（例：減損、固定長期適合率）" aria-label="ノート内を検索" autocomplete="off" enterkeyhint="search">
+        <span class="small muted" id="nsearch-count" aria-live="polite"></span>
+        <button class="btn small" id="nsearch-next" type="button" hidden>次へ</button>
       </div>
       <nav class="chapnav" id="chapnav" aria-label="章へ移動"></nav>
     </div>

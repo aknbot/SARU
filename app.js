@@ -627,17 +627,21 @@
     $$('#sched input[type=checkbox]').forEach(cb=>cb.addEventListener('change', e=>setStepDone(e.target.dataset.day, e.target.checked)));
   }
   document.addEventListener('click', async e=>{
-    const a=e.target.closest('[data-ch]'); if(a && course){ e.preventDefault(); openChapter(a.dataset.ch); return; }
+    const a=e.target.closest('[data-ch]'); if(a && course){ e.preventDefault(); openChapter(a.dataset.ch, a.dataset.h||''); return; }
     const s=e.target.closest('[data-set]'); if(s && course){ e.preventDefault(); if(exam.active){ if(!(await ask({title:'模試を中断しますか？', body:'中断した模試は、あとで「問題」タブから再開できます。', ok:'中断する'}))) return; saveExam(); abortExam(); } location.hash='#/c/'+course.id+'/quiz'; renderSetPicker(s.dataset.set); return; }
   });
   let pendingChapter=null;
-  function openChapter(id){
-    if($('#v-notes').classList.contains('on')){ scrollToChapter(id); return; }
-    pendingChapter=id; location.hash='#/c/'+course.id+'/notes';
+  function openChapter(id, h){
+    if($('#v-notes').classList.contains('on')){ scrollToChapter(id, h); return; }
+    pendingChapter={id, h}; location.hash='#/c/'+course.id+'/notes';
   }
-  function scrollToChapter(id){ const d=$("#"+id); if(!d) return; d.open=true; $$("#chapnav a").forEach(a=>a.classList.toggle("on", a.dataset.ch===id)); setTimeout(()=>{ const sm=$('summary', d); if(sm){ sm.setAttribute('tabindex','-1'); try{ sm.focus({preventScroll:true}); }catch(e){} } d.scrollIntoView({behavior: RM.matches?'auto':'smooth', block:'start'}); }, 60); }
+  /* 見出し文字列（部分一致）から、その h3 を探す */
+  function findHeading(h, root){ if(!h) return null; const hs=$$('h3', root||$('#notes')); return hs.find(x=>x.textContent.trim().startsWith(h)) || hs.find(x=>x.textContent.includes(h)) || null; }
+  function scrollToChapter(id, h){ const d=$("#"+id); if(!d) return; d.open=true; $$("#chapnav a").forEach(a=>a.classList.toggle("on", a.dataset.ch===id));
+    const hd=findHeading(h, d);
+    setTimeout(()=>{ const tgt=hd||$('summary', d); if(tgt){ tgt.setAttribute('tabindex','-1'); try{ tgt.focus({preventScroll:true}); }catch(e){} } (hd||d).scrollIntoView({behavior: RM.matches?'auto':'smooth', block:'start'}); if(hd){ hd.classList.add('flash'); setTimeout(()=>hd.classList.remove('flash'), 1600); } }, 60); }
   const _showView=showView;
-  showView=function(view){ _showView(view); if(view==='notes' && pendingChapter){ const id=pendingChapter; pendingChapter=null; setTimeout(()=>scrollToChapter(id), 30); } };
+  showView=function(view){ _showView(view); if(view==='notes' && pendingChapter){ const pc=pendingChapter; pendingChapter=null; setTimeout(()=>scrollToChapter(pc.id, pc.h), 30); } };
 
   /* 日付が変わったら「今ここ」とカウントダウンを更新 */
   let lastDay=todayStr();
@@ -651,6 +655,7 @@
     $$('summary .arrow', dst).forEach(a=>a.setAttribute('aria-hidden','true'));
     $$('.tw', dst).forEach(t=>{ t.setAttribute('tabindex','0'); t.setAttribute('role','region'); t.setAttribute('aria-label','表（横にスクロールできます）'); });
     syncSheetA11y();
+    if(ns){ ns.value=''; hits=[]; hitPos=-1; nsCount.textContent=''; nsNext.hidden=true; }
     $('#chapnav').innerHTML=$$('details.ch', dst).map(d=>'<a href="#" data-ch="'+d.id+'">'+esc($('summary .num',d).childNodes[0].textContent.trim())+' '+esc(chapterTitle(d.id))+'</a>').join('');
   }
   const notesRoot=$('#v-notes');
@@ -663,6 +668,63 @@
   notesRoot.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ') && e.target.classList && e.target.classList.contains('k') && sheetOn()){ e.preventDefault(); toggleK(e.target); } });
   $('#sheet-all-show').addEventListener('click', ()=>$$('.k', notesRoot).forEach(k=>{ k.classList.add('show'); k.setAttribute('aria-pressed','true'); }));
   $('#sheet-all-hide').addEventListener('click', ()=>$$('.k', notesRoot).forEach(k=>{ k.classList.remove('show'); k.setAttribute('aria-pressed','false'); }));
+
+  /* =================== ノート内検索 =================== */
+  const ns=$('#nsearch'), nsCount=$('#nsearch-count'), nsNext=$('#nsearch-next');
+  let hits=[], hitPos=-1, nsTimer=null;
+  function clearSearch(){
+    $$('mark.hit', notesRoot).forEach(m=>m.replaceWith(document.createTextNode(m.textContent)));
+    $$('details.ch', notesRoot).forEach(d=>{ d.classList.remove('nohit'); d.querySelectorAll('.body, summary').forEach(b=>b.normalize()); });
+    hits=[]; hitPos=-1; nsCount.textContent=''; nsNext.hidden=true;
+  }
+  function runSearch(){
+    clearSearch();
+    const qv=ns.value.trim(); if(!qv) return;
+    const needle=qv.toLowerCase(); const MAX=400; let total=0;
+    $$('details.ch', notesRoot).forEach(d=>{
+      let n=0; const nodes=[];
+      const w=document.createTreeWalker(d, NodeFilter.SHOW_TEXT, { acceptNode:t=>t.nodeValue.trim() && t.parentNode.closest('.body, summary') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+      while(w.nextNode()) nodes.push(w.currentNode);
+      nodes.forEach(t=>{
+        if(total>=MAX) return;
+        const src=t.nodeValue, low=src.toLowerCase(); let i=low.indexOf(needle); if(i<0) return;
+        const frag=document.createDocumentFragment(); let last=0;
+        while(i>=0 && total<MAX){ if(i>last) frag.appendChild(document.createTextNode(src.slice(last,i))); const m=document.createElement('mark'); m.className='hit'; m.textContent=src.slice(i,i+needle.length); frag.appendChild(m); last=i+needle.length; n++; total++; i=low.indexOf(needle,last); }
+        if(last<src.length) frag.appendChild(document.createTextNode(src.slice(last)));
+        t.replaceWith(frag);
+      });
+      if(n>0) d.open=true; else d.classList.add('nohit');
+    });
+    hits=$$('mark.hit', notesRoot);
+    nsCount.textContent=hits.length?hits.length+'件'+(total>=MAX?'以上':''):'見つかりません';
+    nsNext.hidden=hits.length<2;
+    if(hits.length) jumpHit(0);
+  }
+  function jumpHit(i){ if(!hits.length) return; hits.forEach(m=>m.classList.remove('cur')); hitPos=(i+hits.length)%hits.length; const m=hits[hitPos]; m.classList.add('cur'); const d=m.closest('details.ch'); if(d) d.open=true; m.scrollIntoView({behavior:'auto', block:'center'}); nsCount.textContent=(hitPos+1)+' / '+hits.length+'件'; }
+  ns.addEventListener('input', ()=>{ clearTimeout(nsTimer); nsTimer=setTimeout(runSearch, 220); });
+  ns.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); if(hits.length) jumpHit(hitPos+1); else runSearch(); } if(e.key==='Escape'){ ns.value=''; clearSearch(); } });
+  nsNext.addEventListener('click', ()=>jumpHit(hitPos+1));
+
+  /* =================== 問題 → ノートの参照 =================== */
+  /* course.refs（{re, h} の配列。問題文＋解説に re が当たれば見出し h へ）。無ければセット→ステップの read 章 */
+  function refFor(q){
+    if(!course) return null;
+    /* まず問題文だけで判定し、当たらなければ解説も含めて判定する（解説の脇道の語で別の見出しへ飛ばないように） */
+    for(const [text,pass] of [[q.q||'',1], [(q.q||'')+' '+(q.e||''),2]]){
+      for(const r of (course.refs||[])){ if(pass===1 && r.weak) continue; if(r.re.test(text)){ const hd=findHeading(r.h); const d=hd&&hd.closest('details.ch'); if(d) return {ch:d.id, h:r.h, hd}; } }
+    }
+    const ids=[...new Set((course.steps||[]).filter(st=>String(st.set)===String(q.d)).flatMap(st=>st.read||[]))].filter(id=>$('#'+id));
+    if(!ids.length) return null;
+    return {ch:ids[0], alt:ids.slice(1)};
+  }
+  function chLabel(id){ const num=$('#'+id+' summary .num'); return (num?num.childNodes[0].textContent.trim()+' ':'')+chapterTitle(id); }
+  function refHtml(q){
+    const r=refFor(q); if(!r) return '';
+    const hTitle=r.hd? r.hd.textContent.replace(/（.*?）/g,'').trim() : '';
+    const main='<a href="#" data-ch="'+r.ch+'"'+(r.h?' data-h="'+esc(r.h)+'"':'')+'>'+esc(chLabel(r.ch))+(hTitle?' › '+esc(hTitle):'')+'</a>';
+    const alts=(r.alt||[]).map(id=>'<a href="#" data-ch="'+id+'">'+esc(chLabel(id))+'</a>').join('、');
+    return '<p class="ref">ノートで確認：'+main+(alts?'、'+alts:'')+'</p>';
+  }
 
   /* =================== 問題 =================== */
   const quiz={active:false};
@@ -771,7 +833,7 @@
       '<p style="margin:0;font-weight:700;font-size:18px;color:'+(pass?'var(--ok-text)':'var(--aka-text)')+'">'+(pass?'合格ライン（70点）クリア':'あと '+(Math.ceil(L.length*0.7)-c)+' 問で合格ライン')+'</p>'+
       '<div class="tw" style="margin-top:12px"><table><tr><th>大問</th><th>正解</th><th>正答率</th></tr>'+secNames.map((n,i)=>'<tr><td>'+n+'</td><td>'+secC[i]+' / '+secT[i]+'</td><td>'+(secT[i]?Math.round(secC[i]/secT[i]*100):0)+'%</td></tr>').join('')+'</table></div></div>'+
       '<div class="stack">'+(wrongQ.length?'<button type="button" class="btn primary block" id="retry-wrong">間違えた '+wrongQ.length+' 問を解説付きでやり直す</button>':'')+'<button type="button" class="btn block" id="exam-again">もう一度模試を受ける</button><button type="button" class="btn ghost block" id="back">セット選択へ戻る</button></div>'+
-      (wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p></div>').join('')+'</div>':'');
+      (wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p>'+refHtml(q)+'</div>').join('')+'</div>':'');
     const rw=$('#retry-wrong'); if(rw) rw.addEventListener('click', ()=>{ Object.assign(quiz,{active:true, key:'wrong', retry:true, list:shuffle(wrongQ.slice()), pos:0, correct:0, wrongQ:[]}); renderQuestion(); });
     $('#exam-again').addEventListener('click', startExam);
     $('#back').addEventListener('click', ()=>renderSetPicker());
@@ -809,7 +871,7 @@
     const wrong=Object.assign({},store.get('wrong',{})), cleared=Object.assign({},store.get('cleared',{})); const now=Date.now();
     if(ok){ quiz.correct++; delete wrong[q.id]; cleared[q.id]=now; } else { quiz.wrongQ.push(q); wrong[q.id]=now; }
     mem.wrong=wrong; mem.cleared=cleared; touch();
-    $('#verdict').innerHTML='<div class="verdict '+(ok?'ok':'ng')+'"><b class="h">'+(ok?'正解':'不正解 · 正解は「'+esc(q.c[q.a])+'」')+'</b>'+esc(q.e)+'</div>';
+    $('#verdict').innerHTML='<div class="verdict '+(ok?'ok':'ng')+'"><b class="h">'+(ok?'正解':'不正解 · 正解は「'+esc(q.c[q.a])+'」')+'</b>'+esc(q.e)+refHtml(q)+'</div>';
     const n=$('#next'); n.style.display=''; try{ $('#verdict').focus({preventScroll:true}); }catch(e){}
   }
   function renderResult(){
@@ -822,7 +884,7 @@
       '<div class="card" style="text-align:center"><p class="eyebrow">結果 · '+esc(setName(quiz.key))+(quiz.retry?'（やり直し）':'')+'</p><div class="score">'+p+'<small>%</small></div><p class="mono muted" style="margin:0 0 6px">'+c+' / '+t+' 問正解</p><p style="margin:0;font-weight:700">'+msg+'</p></div>'+
       '<div class="stack">'+(quiz.wrongQ.length?'<button type="button" class="btn primary block" id="retry-wrong">今回間違えた '+quiz.wrongQ.length+' 問をもう一度</button>':'')+
       '<button type="button" class="btn block" id="retry-same">同じセットをもう一度</button><button type="button" class="btn ghost block" id="back">セット選択へ戻る</button></div>'+
-      (quiz.wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+quiz.wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p></div>').join('')+'</div>':'')+
+      (quiz.wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+quiz.wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p>'+refHtml(q)+'</div>').join('')+'</div>':'')+
       '<p class="small muted" style="margin-top:12px">復習リストは現在 '+wrong.length+' 問です。</p>';
     const rw=$('#retry-wrong'); if(rw) rw.addEventListener('click', ()=>{ Object.assign(quiz,{active:true, key:quiz.key, retry:true, list:shuffle(quiz.wrongQ.slice()), pos:0, correct:0, wrongQ:[]}); renderQuestion(); });
     $('#retry-same').addEventListener('click', ()=>startQuiz(quiz.key, pick.count));
