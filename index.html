@@ -23,12 +23,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap"></noscript>
-<link rel="stylesheet" href="app.css?v=2.2.0">
-<script src="vendor/supabase.js?v=2.2.0" defer></script>
-<script src="config.js?v=2.2.0" defer></script>
-<script src="exams.js?v=2.2.0" defer></script>
-<script src="courses.js?v=2.2.0" defer></script>
-<script src="app.js?v=2.2.0" defer></script>
+<link rel="stylesheet" href="app.css?v=2.3.0">
+<script src="vendor/supabase.js?v=2.3.0" defer></script>
+<script src="config.js?v=2.3.0" defer></script>
+<script src="exams.js?v=2.3.0" defer></script>
+<script src="courses.js?v=2.3.0" defer></script>
+<script src="app.js?v=2.3.0" defer></script>
 </head>
 <body>
 
@@ -175,6 +175,7 @@
       <div class="grid10" id="prog-grid"></div>
       <p class="small muted" style="margin:10px 0 0">赤＝正答率7割未満（ノートを読み直す）、緑＝8割以上。セルをタップするとそのセットを解けます。</p>
     </div>
+    <div class="card" id="weak-card" hidden></div>
   </section>
 
   <!-- ノート -->

@@ -97,6 +97,14 @@ async function page(opts = {}) {
   check('note search highlights matches and opens the chapter', sr.hits > 0 && /件/.test(sr.count) && sr.openHit, JSON.stringify(sr));
   await p.fill('#nsearch', ''); await p.waitForTimeout(400);
   check('note search clears', (await p.$$('#notes mark.hit')).length === 0);
+  // 弱点カード（復習リストがあれば出る）とリマインド
+  await p.click('#nav button[data-view="home"]'); await p.waitForTimeout(300);
+  const wk = await p.evaluate(() => ({ n: window.KN.weak().wrongQ.length, hidden: document.querySelector('#weak-card').hidden, rows: document.querySelectorAll('#weak-card .weak li').length }));
+  check('weak card matches review list', (wk.n === 0) === wk.hidden && (wk.n === 0 || wk.rows > 0), JSON.stringify(wk));
+  const ics = await p.evaluate(() => window.KN.ics('21:00'));
+  check('ics has exam day and daily reminder', /BEGIN:VCALENDAR/.test(ics) && /試験日/.test(ics) && /RRULE:FREQ=DAILY;UNTIL=\d{8}T145959Z/.test(ics) && /\r\n$/.test(ics), ics.slice(0, 80));
+  await p.click('#nav button[data-view="sched"]'); await p.waitForTimeout(300);
+  check('reminder section in schedule', !!(await p.$('#rem-ics')) && (await p.$$('#rem-details .rem li')).length >= 1);
   await p.click('#nav button[data-view="sched"]'); await p.waitForTimeout(300);
   check('schedule rendered', (await p.$$('#sched .day')).length >= 10);
   check('plan form present', !!(await p.$('#plan-round')) && !!(await p.$('#plan-apply')));

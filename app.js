@@ -480,7 +480,7 @@
       try{ localStorage.setItem('kn_last_'+uid(), id); }catch(e){}
       if(sb&&user) pullProgress();
     }
-    if(view==='home' && !homeManual){ const i=homeIndex(); if(i!==homeStep){ homeStep=i; renderHome(); } }
+    if(view==='home'){ if(!homeManual){ const i=homeIndex(); if(i!==homeStep) homeStep=i; } renderHome(); }
     showView(view);
     if(view==='quiz' && !quiz.active) renderSetPicker();
   }
@@ -511,6 +511,68 @@
     $('#sched-title').textContent=c.schedTitle||'合格までの予定';
     $('#examday-home').innerHTML=(c.examDay||[]).map(x=>'<li>'+x+'</li>').join('');
   }
+  /* =================== リマインド（カレンダー） =================== */
+  function reminderEvents(){
+    const c=course, ex=c.plan.exam, lv=LEVELS[c.id]||{}; if(!ex) return [];
+    const t=todayStr(), applied=!!store.get('applied',false), name='第'+ex.round+'回 ビジネス会計検定 '+(lv.name||'');
+    const evs=[];
+    if(!applied && ex.apply){
+      if(ex.apply.conv) evs.push({date:ex.apply.conv, title:name+' 申込締切（コンビニ払い）', desc:'公式サイト https://www.b-accounting.jp/ の「受験申込」から。'});
+      if(ex.apply.card) evs.push({date:ex.apply.card, title:name+' 申込締切（クレジットカード払い）', desc:'公式サイト https://www.b-accounting.jp/ の「受験申込」から。'});
+    }
+    if(ex.ticket) evs.push({date:ex.ticket, title:name+' 受験票の到着めやす', desc:(ex.ticketAsk?'届いていなければ '+jpDate(ex.ticketAsk[0])+'〜'+jpDate(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')});
+    if(lv.gather){ const [h,m]=lv.gather.split(':').map(Number); const end=new Date(2000,0,1,h,m+(lv.minutes||120)+30); evs.push({date:ex.date, time:lv.gather, endTime:String(end.getHours()).padStart(2,'0')+':'+String(end.getMinutes()).padStart(2,'0'), title:name+' 試験日（集合 '+lv.gather+'）', desc:'持ち物：受験票・顔写真付き身分証明書（原本）・HBかBの鉛筆かシャープペン・消しゴム・電卓（四則演算のみ）。'}); }
+    else evs.push({date:ex.date, title:name+' 試験日', desc:''});
+    if(ex.result) evs.push({date:ex.result, title:name+' 合格発表', desc:'公式サイトで確認。'});
+    return evs.filter(e=>e.date>=t);
+  }
+  const icsEsc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
+  /* 1行75オクテット以内に折り返す（マルチバイト文字を割らない） */
+  const icsFold=line=>{ const enc=new TextEncoder(); const out=[]; let cur=''; let bytes=0; for(const ch of line){ const b=enc.encode(ch).length; if(bytes+b>72){ out.push(cur); cur=' '+ch; bytes=1+b; } else { cur+=ch; bytes+=b; } } out.push(cur); return out.join('\r\n'); };
+  const ymd=iso=>iso.replace(/-/g,''); const hm=t=>t.replace(':','')+'00';
+  function buildIcs(dailyTime){
+    const c=course, p=c.plan, evs=reminderEvents(); const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+    const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//'+SITE_NAME+'//JA','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+    const push=(uid, body)=>{ lines.push('BEGIN:VEVENT','UID:'+uid+'@kentei-note','DTSTAMP:'+stamp); body.forEach(l=>lines.push(l)); lines.push('END:VEVENT'); };
+    evs.forEach((e,i)=>{
+      const body=['SUMMARY:'+icsEsc(e.title),'DESCRIPTION:'+icsEsc(e.desc)];
+      if(e.time){ body.push('DTSTART;TZID=Asia/Tokyo:'+ymd(e.date)+'T'+hm(e.time),'DTEND;TZID=Asia/Tokyo:'+ymd(e.date)+'T'+hm(e.endTime)); body.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(e.title),'TRIGGER:-P1D','END:VALARM'); }
+      else { body.push('DTSTART;VALUE=DATE:'+ymd(e.date),'DTEND;VALUE=DATE:'+ymd(addDays(e.date,1))); body.push('BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(e.title),'TRIGGER:-PT15H','END:VALARM'); }
+      push(c.id+'-'+p.round+'-'+i, body);
+    });
+    if(dailyTime && p.examDate>=todayStr()){
+      const start=todayStr()>p.start?todayStr():p.start; const [h,m]=dailyTime.split(':').map(Number); const end=new Date(2000,0,1,h,m+30);
+      const endT=String(end.getHours()).padStart(2,'0')+':'+String(end.getMinutes()).padStart(2,'0');
+      push(c.id+'-'+p.round+'-daily', ['SUMMARY:'+icsEsc(SITE_NAME+' 今日の学習（30分）'),'DESCRIPTION:'+icsEsc(location.origin+location.pathname+'#/c/'+c.id+'/home'),
+        'DTSTART;TZID=Asia/Tokyo:'+ymd(start)+'T'+hm(dailyTime),'DTEND;TZID=Asia/Tokyo:'+ymd(start)+'T'+hm(endT),
+        'RRULE:FREQ=DAILY;UNTIL='+ymd(p.examDate)+'T145959Z','BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+icsEsc('今日の学習'),'TRIGGER:PT0M','END:VALARM']);
+    }
+    lines.push('END:VCALENDAR');
+    return lines.map(icsFold).join('\r\n')+'\r\n';
+  }
+  function gcalUrl(e){
+    const base='https://calendar.google.com/calendar/render?action=TEMPLATE&ctz=Asia/Tokyo';
+    const dates=e.time? ymd(e.date)+'T'+hm(e.time)+'/'+ymd(e.date)+'T'+hm(e.endTime) : ymd(e.date)+'/'+ymd(addDays(e.date,1));
+    return base+'&text='+encodeURIComponent(e.title)+'&dates='+dates+'&details='+encodeURIComponent(e.desc||'')+(e.recur?'&recur='+encodeURIComponent(e.recur):'');
+  }
+  function remindersHtml(){
+    const evs=reminderEvents(); const p=course.plan;
+    const rows=evs.map(e=>'<li><span class="d">'+jpDate(e.date)+(e.time?' '+e.time:'')+'</span><span>'+esc(e.title.replace(/^第\d+回 ビジネス会計検定 \d級 /,''))+'</span><a href="'+gcalUrl(e)+'" target="_blank" rel="noopener">Google カレンダー</a></li>').join('');
+    let saved='21:00'; try{ saved=localStorage.getItem('kn_remtime')||'21:00'; }catch(e){}
+    return '<p class="small muted" style="margin:0 0 6px">アプリからは通知を送れないので、スマホのカレンダーに入れておくと締切や試験日の前日に通知が来ます。まとめて入れるなら .ics、1 件ずつなら Google カレンダーのリンクを。</p>'+
+      (evs.length?'<ul class="rem">'+rows+'</ul>':'<p class="small muted">この回の予定はすべて過ぎています。</p>')+
+      '<div class="rem-daily"><label class="small" style="display:flex;gap:8px;align-items:center;font-weight:600">毎日の学習の時刻 <input type="time" id="rem-time" value="'+esc(saved)+'"></label>'+
+      '<a class="btn small" id="rem-gcal-daily" href="#" target="_blank" rel="noopener">毎日の学習を Google カレンダーに</a>'+
+      '<button type="button" class="btn small primary" id="rem-ics">全部まとめて .ics をダウンロード</button></div>'+
+      '<p class="small muted" style="margin:8px 0 0">.ics は iPhone なら「カレンダーに追加」、Android なら Google カレンダーで開けます。毎日の学習は試験日（'+jpDate(p.examDate)+'）まで繰り返し。</p>';
+  }
+  function bindReminders(){
+    const t=$('#rem-time'), dl=$('#rem-ics'), g=$('#rem-gcal-daily'); if(!t) return;
+    const p=course.plan; const c=course;
+    const updDaily=()=>{ const v=t.value||'21:00'; try{ localStorage.setItem('kn_remtime', v); }catch(e){} const [h,m]=v.split(':').map(Number); const end=new Date(2000,0,1,h,m+30); const endT=String(end.getHours()).padStart(2,'0')+':'+String(end.getMinutes()).padStart(2,'0'); const start=todayStr()>p.start?todayStr():p.start; g.href=gcalUrl({date:start, time:v, endTime:endT, title:SITE_NAME+' 今日の学習（30分）', desc:location.origin+location.pathname+'#/c/'+c.id+'/home', recur:'RRULE:FREQ=DAILY;UNTIL='+ymd(p.examDate)}); };
+    updDaily(); t.addEventListener('change', updDaily);
+    dl.addEventListener('click', ()=>{ const ics=buildIcs(t.value||'21:00'); const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='kentei-note-'+c.id+'-'+p.round+'.ics'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 2000); toast('カレンダーのファイルを保存しました。開いて追加してください。'); });
+  }
   function renderSchedInfo(){
     const c=course, p=course.plan;
     const ex=p.exam;
@@ -522,7 +584,9 @@
       '<details class="info" id="plan-details"><summary>受験する回・開始日を変更</summary><div class="body">'+planForm+'</div></details>'+
       '<details class="info"><summary>試験概要'+(ex?'（第'+ex.round+'回）':'')+'</summary><div class="body">'+factsHtml()+'</div></details>'+
       '<details class="info"><summary>毎日の回し方</summary><div class="body"><ol class="steps">'+(c.howto||[]).map(h=>'<li><span class="t">'+esc(h.t)+'</span><span>'+h.html+'</span><span></span></li>').join('')+'</ol>'+(c.howtoNote?'<p class="small muted" style="margin:10px 0 0">'+c.howtoNote+'</p>':'')+'</div></details>'+
-      '<details class="info"><summary>当日の動き方</summary><div class="body"><ul class="b small">'+(c.examDay||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul></div></details>';
+      '<details class="info"><summary>当日の動き方</summary><div class="body"><ul class="b small">'+(c.examDay||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul></div></details>'+
+      '<details class="info" id="rem-details"><summary>リマインド（カレンダーに入れる）</summary><div class="body">'+remindersHtml()+'</div></details>';
+    bindReminders();
     $('#plan-apply').addEventListener('click', ()=>{
       const round=Number($('#plan-round').value); const start=$('#plan-start').value||todayStr();
       const exd=(examByRound(c.id, round)||{}).date; if(exd && start>exd){ toast('開始日は試験日（'+jpDate(exd)+'）より前にしてください。'); return; }
@@ -607,6 +671,39 @@
     renderProgress();
   }
   function setStepDone(n, done){ const c2=Object.assign({},store.get('sched',{})); const u=Object.assign({},store.get('unsched',{})); const now=Date.now(); if(done){ c2[n]=now; delete u[n]; } else { delete c2[n]; u[n]=now; } mem.sched=c2; mem.unsched=u; touch(); const fid=document.activeElement&&document.activeElement.id; const fday=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.day; renderHome(); renderSched(); if(fday){ const el=$('#sched input[data-day="'+fday+'"]'); if(el) el.focus({preventScroll:true}); } else if(fid){ const el=$('#'+fid); if(el) el.focus({preventScroll:true}); } }
+  /* =================== 弱点分析 =================== */
+  /* 復習リスト（間違えて未クリアの問題）をノートの見出しごとに集計し、正答率7割未満のセットと合わせて出す */
+  let weakGroups={};
+  function weakAnalysis(){
+    const w=store.get('wrong',{}); const wrongQ=Q().filter(q=>w[q.id]);
+    const groups={};
+    wrongQ.forEach(q=>{ const r=refFor(q); const key=r?(r.h?r.ch+'|'+r.h:r.ch):'other'; const g=groups[key]||(groups[key]={key, ch:r&&r.ch, h:r&&r.h, hd:r&&r.hd, ids:[]}); g.ids.push(q.id); });
+    const list=Object.values(groups).sort((a,b)=>b.ids.length-a.ids.length);
+    const best=store.get('best',{}); const weakSets=Object.keys(course.sets).filter(n=>best[n]&&best[n].p<70);
+    return {wrongQ, list, weakSets};
+  }
+  function renderWeak(){
+    const el=$('#weak-card'); if(!el) return;
+    const a=weakAnalysis(); weakGroups={}; a.list.forEach(g=>weakGroups[g.key]=g);
+    if(!a.wrongQ.length && !a.weakSets.length){ el.hidden=true; el.innerHTML=''; return; }
+    el.hidden=false;
+    const rows=a.list.slice(0,8).map(g=>{
+      const title=g.hd? g.hd.textContent.replace(/（.*?）/g,'').trim() : (g.ch?chLabel(g.ch):'その他');
+      const sub=g.ch&&g.hd? chLabel(g.ch) : '';
+      return '<li><span class="t">'+esc(title)+(sub?'<small>'+esc(sub)+'</small>':'')+'</span><span class="n">'+g.ids.length+'問</span>'+
+        '<span class="acts">'+(g.ch?'<a class="btn small" href="#" data-ch="'+g.ch+'"'+(g.h?' data-h="'+esc(g.h)+'"':'')+'>ノート</a>':'')+'<button type="button" class="btn small primary" data-drill="'+esc(g.key)+'">解く</button></span></li>';
+    }).join('');
+    el.innerHTML='<p class="eyebrow">弱点</p><h2 style="font-size:19px">つまずいている論点</h2>'+
+      '<p class="small muted" style="margin:0">間違えたまま正解していない問題を、ノートの見出しごとに集計。正解すると自動で消えます。'+(a.weakSets.length?' 正答率 7 割未満のセット：'+a.weakSets.map(n=>'SET '+n).join('、')+'。':'')+'</p>'+
+      (a.list.length?'<ul class="weak">'+rows+'</ul>'+(a.list.length>8?'<p class="small muted" style="margin:8px 0 0">ほか '+(a.list.length-8)+' 論点。復習リストからまとめて解けます。</p>':''):'')+
+      '<div class="row" style="margin-top:12px"><button type="button" class="btn small" data-set="wrong">復習リスト '+a.wrongQ.length+' 問をまとめて解く</button></div>';
+  }
+  function startDrill(key){
+    const g=weakGroups[key]; if(!g) return;
+    const title=g.hd? g.hd.textContent.replace(/（.*?）/g,'').trim() : (g.ch?chLabel(g.ch):'その他');
+    customPool={ids:new Set(g.ids), label:title};
+    location.hash='#/c/'+course.id+'/quiz'; startQuiz('custom', 0);
+  }
   function renderProgress(){
     const S=STEPS(); const checks=store.get('sched',{}); const done=S.filter(d=>checks[d.n]).length;
     if(mem.done!==done || mem.total!==S.length){ mem.done=done; mem.total=S.length; writeLocal(); }
@@ -614,6 +711,7 @@
     const best=store.get('best',{}); const wrong=poolFor('wrong');
     $('#prog-text').textContent=done+' / '+S.length+' ステップ完了 · 復習リスト '+wrong.length+' 問'+(best.exam?' · 模試ベスト '+best.exam.p+'点':'');
     $('#prog-grid').innerHTML=Object.keys(course.sets).map(n=>{ const b=best[n]; const cls=b?(b.p>=80?'good':b.p<70?'weak':''):''; return '<button class="cell '+cls+'" data-set="'+n+'" type="button" title="'+esc(course.sets[n].t)+'"><div class="n">SET '+n+'</div><div class="s">'+(b?b.p+'%':'—')+'</div><div class="go">'+(b?'もう一度 ›':'解く ›')+'</div></button>'; }).join('');
+    renderWeak();
   }
   function renderSched(){
     renderSchedInfo();
@@ -628,6 +726,7 @@
   }
   document.addEventListener('click', async e=>{
     const a=e.target.closest('[data-ch]'); if(a && course){ e.preventDefault(); openChapter(a.dataset.ch, a.dataset.h||''); return; }
+    const dr=e.target.closest('[data-drill]'); if(dr && course){ e.preventDefault(); if(exam.active){ if(!(await ask({title:'模試を中断しますか？', body:'中断した模試は、あとで「問題」タブから再開できます。', ok:'中断する'}))) return; saveExam(); abortExam(); } startDrill(dr.dataset.drill); return; }
     const s=e.target.closest('[data-set]'); if(s && course){ e.preventDefault(); if(exam.active){ if(!(await ask({title:'模試を中断しますか？', body:'中断した模試は、あとで「問題」タブから再開できます。', ok:'中断する'}))) return; saveExam(); abortExam(); } location.hash='#/c/'+course.id+'/quiz'; renderSetPicker(s.dataset.set); return; }
   });
   let pendingChapter=null;
@@ -729,12 +828,14 @@
   /* =================== 問題 =================== */
   const quiz={active:false};
   function Q(){ return course.questions; }
+  let customPool={ids:new Set(), label:'弱点'};
   function poolFor(key){
     if(key==='mix') return Q().slice();
+    if(key==='custom') return Q().filter(q=>customPool.ids.has(q.id));
     if(key==='wrong'){ const w=store.get('wrong',{}); return Q().filter(q=>w[q.id]); }
     return Q().filter(q=>String(q.d)===String(key));
   }
-  function setName(key){ return key==='mix'?'総合ランダム':key==='wrong'?'復習リスト':'セット '+key+'：'+((course.sets[key]||{}).t||''); }
+  function setName(key){ return key==='mix'?'総合ランダム':key==='wrong'?'復習リスト':key==='custom'?'弱点：'+customPool.label:'セット '+key+'：'+((course.sets[key]||{}).t||''); }
   let pick={key:null, count:10};
   function renderSetPicker(pre){
     abortExam(); quiz.active=false;
@@ -887,7 +988,7 @@
       (quiz.wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+quiz.wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p>'+refHtml(q)+'</div>').join('')+'</div>':'')+
       '<p class="small muted" style="margin-top:12px">復習リストは現在 '+wrong.length+' 問です。</p>';
     const rw=$('#retry-wrong'); if(rw) rw.addEventListener('click', ()=>{ Object.assign(quiz,{active:true, key:quiz.key, retry:true, list:shuffle(quiz.wrongQ.slice()), pos:0, correct:0, wrongQ:[]}); renderQuestion(); });
-    $('#retry-same').addEventListener('click', ()=>startQuiz(quiz.key, pick.count));
+    $('#retry-same').addEventListener('click', ()=>startQuiz(quiz.key, quiz.key==='custom'?0:pick.count));
     $('#back').addEventListener('click', ()=>renderSetPicker());
     renderProgress(); window.scrollTo({top:0}); focusResult();
   }
@@ -960,6 +1061,6 @@
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(setTop);
   if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost') && SITE.serviceWorker!==false){ window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
   /* テスト・デバッグ用の公開API（副作用なし） */
-  window.KN = Object.freeze({ version: APP_VERSION, merge, sanitize, buildPlan: (c,p)=>buildPlan(c,p) });
+  window.KN = Object.freeze({ version: APP_VERSION, merge, sanitize, buildPlan: (c,p)=>buildPlan(c,p), ics: t=>course?buildIcs(t):'', weak: ()=>course?weakAnalysis():null });
   initAuth();
 })();
