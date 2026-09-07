@@ -185,6 +185,27 @@ async function page(opts = {}) {
   await ctx.close();
 }
 
+// 5. 財務3級（五答択一・CBT 予定・科目別模試）
+{
+  const { p, ctx, errors } = await page({ loggedIn: true });
+  await p.goto(origin + '#/c/zm3/notes', { waitUntil: 'load' }); await p.waitForTimeout(1200);
+  check('zm3 notes rendered', (await p.$$('#v-notes details.ch')).length >= 10);
+  const zq = await p.evaluate(() => { const qs = window.COURSES?.zm3?.questions || []; return { n: qs.length, five: qs.every(q => q.c && q.c.length === 5), ds: qs.filter(q => q.ds).length }; });
+  check('zm3 questions are five-choice with datasets', zq.n >= 150 && zq.five && zq.ds >= 20, JSON.stringify(zq));
+  await p.click('#nav [data-view="quiz"]'); await p.waitForTimeout(300); await p.click('#quiz #start'); await p.waitForTimeout(300);
+  check('zm3 question shows five choices', (await p.$$('#quiz .choice')).length === 5);
+  await p.click('#nav [data-view="sched"]'); await p.waitForTimeout(300);
+  check('zm3 plan form offers CBT with a date field', !!(await p.$('#plan-round option[value="cbt"]')) && !!(await p.$('#plan-cbt-date')));
+  await p.selectOption('#plan-round', 'cbt'); await p.waitForTimeout(100);
+  check('CBT date field appears when CBT is chosen', await p.evaluate(() => !document.querySelector('#plan-cbt-wrap').hidden));
+  await p.click('#nav [data-view="quiz"]'); await p.waitForTimeout(300);
+  check('zm3 mock card counts 50 questions', /50問/.test(await p.textContent('#quiz')));
+  await p.click('#exam-start'); await p.waitForTimeout(500);
+  check('zm3 mock starts in 財務諸表 section', /財務諸表/.test(await p.textContent('#quiz .qhead')) && (await p.$$('#quiz .choice')).length === 5);
+  check('no JS errors (zm3)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
 await browser.close(); if (local) local.close();
 console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
 process.exit(failures ? 1 : 0);

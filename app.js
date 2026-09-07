@@ -874,7 +874,7 @@
       '<button type="button" class="setbtn wide'+(pick.key==='mix'?' sel':'')+'" data-pick="mix" aria-pressed="'+(pick.key==='mix')+'"><span class="n">MIX</span><span class="t">総合ランダム（全範囲から出題）</span><span class="s">'+Q().length+'問から</span></button>'+
       '<button type="button" class="setbtn wide'+(pick.key==='wrong'?' sel':'')+'" data-pick="wrong" aria-pressed="'+(pick.key==='wrong')+'" '+(wrong.length?'':'disabled')+'><span class="n">REVIEW</span><span class="t">復習リスト（間違えた問題）</span><span class="s">'+(wrong.length?wrong.length+'問':'間違えた問題が自動でここに溜まります')+'</span></button>'+
       '</div></div>'+
-      (course.mock?'<div class="card" style="border-color:var(--accent)"><p class="eyebrow">模擬試験</p><h2 style="font-size:18px">模擬試験（本番形式）</h2><p class="small muted" style="margin:0 0 10px">'+esc(course.mock.desc||'')+'</p><div class="row" style="justify-content:space-between"><span class="small mono">'+(course.mock.minutes)+'分 · '+(course.mock.tf+course.mock.single+course.mock.data)+'問'+(best.exam?' · ベスト '+best.exam.p+'点':'')+'</span><button type="button" class="btn primary" id="exam-start">模試を始める</button></div></div>':'')+
+      (course.mock?'<div class="card" style="border-color:var(--accent)"><p class="eyebrow">模擬試験</p><h2 style="font-size:18px">模擬試験（本番形式）</h2><p class="small muted" style="margin:0 0 10px">'+esc(course.mock.desc||'')+'</p><div class="row" style="justify-content:space-between"><span class="small mono">'+(course.mock.minutes)+'分 · '+mockTotal(course.mock)+'問'+(best.exam?' · ベスト '+best.exam.p+'点':'')+'</span><button type="button" class="btn primary" id="exam-start">模試を始める</button></div></div>':'')+
       '<div class="card"><p class="eyebrow">出題数</p><div class="row" style="justify-content:space-between"><div class="seg" role="group" aria-label="出題数">'+[10,20,0].map(c=>'<button type="button" data-count="'+c+'" class="'+(pick.count===c?'on':'')+'" aria-pressed="'+(pick.count===c)+'">'+(c===0?'全部':c+'問')+'</button>').join('')+'</div><button type="button" class="btn primary" id="start">開始</button></div><p class="small muted" style="margin:10px 0 0">選択肢は毎回シャッフルされます。間違えた問題は自動で復習リストに入り、正解すると外れます。</p></div>';
     $$('#quiz [data-pick]').forEach(b=>b.addEventListener('click', ()=>{ pick.key=b.dataset.pick; renderSetPicker(); }));
     $$('#quiz [data-count]').forEach(b=>b.addEventListener('click', ()=>{ pick.count=Number(b.dataset.count); renderSetPicker(); }));
@@ -892,6 +892,7 @@
   function loadSavedExam(){ try{ const v=sessionStorage.getItem(examKey()); if(!v) return null; const s=JSON.parse(v); if(!s||!Array.isArray(s.ids)||s.end<=Date.now()) { sessionStorage.removeItem(examKey()); return null; } return s; }catch(e){ return null; } }
   function clearSavedExam(){ try{ sessionStorage.removeItem(examKey()); }catch(e){} }
   function abortExam(){ clearInterval(exam.timer); exam.timer=null; exam.active=false; }
+  function mockTotal(m){ return m.parts ? m.parts.reduce((n,p)=>n+(p.n||0),0) : (m.tf||0)+(m.single||0)+(m.data||0); }
   function buildExamList(){
     const cfg=course.mock; const all=Q();
     if(cfg.parts){
