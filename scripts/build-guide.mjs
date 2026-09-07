@@ -69,7 +69,7 @@ ${body}
   </main>
   <footer>
     <nav><a href="${rel}guide/">資格ガイド</a><a href="${rel}about.html">運営者</a><a href="${rel}terms.html">利用規約</a><a href="${rel}privacy.html">プライバシーポリシー</a><a href="${rel}tokushoho.html">特定商取引法に基づく表記</a></nav>
-    <p>「ビジネス会計検定試験」は大阪商工会議所の登録商標です。本サイトは同会議所とは関係のない独自の学習教材で、公式テキスト・公式問題集の本文は転載していません。日程・受験料は必ず<a href="${OFFICIAL}" target="_blank" rel="noopener">公式サイト</a>でご確認ください。</p>
+    <p>各検定試験の名称は各主催団体の商標または登録商標です（「ビジネス会計検定試験」は大阪商工会議所、「銀行業務検定試験」は銀行業務検定協会）。本サイトは各団体とは関係のない独自の学習教材で、公式テキスト・公式問題集の本文は転載していません。日程・受験料は必ず各主催団体の公式サイトでご確認ください。</p>
   </footer>
 </div>
 </body>
@@ -84,7 +84,7 @@ const out = [];
 function write(path, html) { const dir = path.split('/').slice(0, -1).join('/'); if (dir && !existsSync(dir)) mkdirSync(dir, { recursive: true }); writeFileSync(path, html); out.push(path); }
 
 /* ---------- ビジネス会計検定：日程・締切・受験料 ---------- */
-const upcoming = EXAMS.filter(e => e.date >= TODAY);
+const upcoming = EXAMS.filter(e => e.date >= TODAY && e.levels && (e.levels.bk3 || e.levels.bk2 || e.levels.bk1));
 const next = upcoming[0];
 const levelName = { bk3: '3級', bk2: '2級', bk1: '1級' };
 const fee1 = 11550; // 1級（公式サイト 2026-09-05 取得）
@@ -229,6 +229,66 @@ ${faqHtml(faq)}`;
   write(path, page({ path, title, desc, eyebrow: 'ビジネス会計検定試験', crumbs, body, depth: 2, jsonld: [article(title, desc, path, TODAY), faqLd(faq)] }));
 }
 
+/* ---------- 銀行業務検定 財務3級：概要と日程 ---------- */
+const ZM = EXAMS.filter(e => e.levels && e.levels.zm3);
+const zmNext = ZM.find(e => e.date >= TODAY);
+const CBT = ctx.window.CBT && ctx.window.CBT.zm3;
+const KHK = 'https://www.khk.co.jp/exam/';
+{
+  const path = 'guide/ginko-zaimu3/index.html';
+  const title = '銀行業務検定 財務3級とは？出題形式・合格率・CBTと会場の違い・勉強時間';
+  const desc = `銀行業務検定試験 財務3級は五答択一50問（財務諸表30問・財務分析20問）、120分、60点以上で合格。受験料5,500円。会場試験は年2回（7月・12月）、CBTはテストセンターで通年。${zmNext ? `次回の会場試験は${jpY(zmNext.date)}。` : ''}出題範囲・合格率・勉強時間の目安を1ページで。`;
+  const faq = [
+    ['財務3級の合格率は？', '主催団体が公表した直近の例では第161回（2025年3月）が27.6%でした。銀行業務検定の中では合格率が低めの種目で、財務分析の計算問題で差がつきます。'],
+    ['CBTと会場試験はどちらがよい？', '出題範囲・難易度・受験料（5,500円）は同じです。CBTは全国のテストセンターで通年（4月下旬〜翌3月末）、好きな日に受験でき、結果が終了直後に分かります。会場試験は年2回（7月・12月）で、団体受験や電卓の持込を重視する人向けです。CBTでは電卓を持ち込めず、画面上の電卓を使います。'],
+    ['どのくらい勉強すれば受かりますか？', '財務の知識がない状態からなら50時間程度、簿記3級やビジネス会計検定の知識があれば20〜30時間が目安です。公式の問題解説集を2周し、財務分析の計算式を式で言えるようにするのが近道です。'],
+    ['公式テキスト以外に何が必要？', '経済法令研究会の「公式テキスト 財務3級」（2,750円）と「財務3級 問題解説集」（2,970円）が中心です。本サイトの財務3級コースは、この2冊の範囲を10章の要点ノートと一問一答、本番形式の模試にしたもので、補助として使えます。']
+  ];
+  const body = `
+    <p class="answer"><b>金融機関の職員向けに、取引先の決算書を読む力を測る検定です。</b>五答択一50問（財務諸表30問・財務分析20問）、120分、100点満点中60点以上で合格。受験料は5,500円。会場試験は年2回（7月・12月）、CBTはテストセンターで通年受験できます。${zmNext ? `次回の会場試験は第${zmNext.round}回、${jpY(zmNext.date)}です。` : ''}</p>
+    <p class="src">出典：銀行業務検定協会・経済法令研究会・CBT-Solutions の各公式ページ（${TODAY} 時点）。</p>
+    <h2>出題形式</h2>
+    <div class="tw"><table><tbody>
+<tr><th scope="row">形式</th><td>五答択一式 50問（各2点）。マークシート（会場）またはコンピュータ（CBT）</td></tr>
+<tr><th scope="row">科目構成</th><td>(1) 財務諸表 30問　(2) 財務分析 20問</td></tr>
+<tr><th scope="row">試験時間</th><td>120分（会場は開始後60分・終了前10分の退席不可）</td></tr>
+<tr><th scope="row">合格基準</th><td>100点満点中60点以上（試験委員会で最終決定）</td></tr>
+<tr><th scope="row">受験料</th><td class="n">5,500円（税込）。会場・CBT 共通</td></tr>
+<tr><th scope="row">電卓</th><td>会場は持込可（金融計算・関数・メモ機能付きは不可）。CBT は持込不可で、画面上の電卓を使う</td></tr>
+</tbody></table></div>
+    <h2>出題範囲</h2>
+    <div class="tw"><table>
+<thead><tr><th>編</th><th>主な項目（公式テキストの目次より）</th></tr></thead>
+<tbody>
+<tr><th scope="row">第1編 財務諸表（30問）</th><td>計算書類、企業会計原則、貸借対照表、流動・固定の分類基準、流動性配列法、受取手形、有価証券、棚卸資産、有形固定資産、減価償却 ほか（負債・純資産、損益計算書、キャッシュ・フロー計算書、連結）</td></tr>
+<tr><th scope="row">第2編 財務分析（20問）</th><td>総資本経常利益率、売上高経常利益率、総資本回転率、売上債権回転率・回転期間、棚卸資産回転率・回転期間、損益分岐点分析、損益分岐点売上高、目標売上高、損益分岐点比率と安全余裕率、売上総利益の増減分析 ほか（安全性、生産性、資金運用表）</td></tr>
+</tbody></table></div>
+    <h2>会場試験と CBT の違い</h2>
+    <div class="tw"><table>
+<thead><tr><th></th><th>全国一斉公開試験（会場）</th><th>CBT（テストセンター）</th></tr></thead>
+<tbody>
+<tr><th scope="row">実施</th><td>年2回（7月・12月）。13:30〜15:30</td><td>${CBT ? `${jpY(CBT.from)}〜${jpY(CBT.to)}の好きな日` : '通年'}</td></tr>
+<tr><th scope="row">申込</th><td>${zmNext ? `第${zmNext.round}回は${jpY(zmNext.applyFrom)}〜${jpY(zmNext.apply.until)}` : '試験の約2か月前に受付'}（経済法令研究会）</td><td>${CBT ? `${jpY(CBT.applyFrom)}〜${jpY(CBT.applyTo)}` : '通年'}。申込日の3日目以降を予約（CBT-Solutions）</td></tr>
+<tr><th scope="row">受験票</th><td>郵送</td><td>なし（予約確認メールとマイページ）</td></tr>
+<tr><th scope="row">持ち物</th><td>受験票、鉛筆・シャープペン、消しゴム、電卓</td><td>本人確認書類のみ</td></tr>
+<tr><th scope="row">結果</th><td>約3日後に正解発表、約1か月後に成績通知</td><td>終了直後に画面表示</td></tr>
+</tbody></table></div>
+    <h2>合格率</h2>
+    <p>主催団体が公表した直近の例では、第161回（2025年3月）の合格率は27.6%でした。銀行業務検定の3級種目の中では低めで、財務分析（計算）で点を落とす人が多い試験です。回ごとの合格率は協会の「事務局報」に掲載されます。</p>
+    <h2>勉強の進め方</h2>
+    <ol>
+      <li><b>受験方式と受験日を先に決める。</b>CBT なら自分で日を決められるので、逆算した予定が立てやすい。</li>
+      <li><b>財務諸表（30問）は置き場所と原則・例外。</b>流動・固定の分類、有価証券の4分類、引当金の要件、利益の5区分を一問一答で固める。</li>
+      <li><b>財務分析（20問）は式を体に入れる。</b>総資本経常利益率の分解、回転期間、損益分岐点、資金運用表を電卓で解く。</li>
+      <li><b>問題解説集を時間を計って2周。</b>本番形式の模試で60点を安定して超えたら受験する。</li>
+    </ol>
+    <h2>よくある質問</h2>
+${faqHtml(faq)}`;
+  const crumbs = [{ name: NAME, path: '' }, { name: '資格ガイド', path: 'guide/' }, { name: '銀行業務検定 財務3級', path }];
+  const events = ZM.filter(e => e.date >= TODAY).map(e => ({ '@context': 'https://schema.org', '@type': 'Event', name: `第${e.round}回 銀行業務検定試験 財務3級`, startDate: `${e.date}T13:30:00+09:00`, endDate: `${e.date}T15:30:00+09:00`, eventStatus: 'https://schema.org/EventScheduled', eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', location: { '@type': 'Place', name: '全国の試験会場', address: { '@type': 'PostalAddress', addressCountry: 'JP' } }, organizer: { '@type': 'Organization', name: '銀行業務検定協会', url: 'https://www.kenteishiken.gr.jp/' }, offers: { '@type': 'Offer', price: LEVELS.zm3.fee, priceCurrency: 'JPY', url: KHK, availability: 'https://schema.org/InStock', validFrom: e.applyFrom, validThrough: e.apply.until }, description: `申込受付 ${e.applyFrom}〜${e.apply.until}。五答択一50問・120分・60点以上で合格。` }));
+  write(path, page({ path, title, desc, eyebrow: '銀行業務検定試験', crumbs, body, depth: 2, jsonld: [article(title, desc, path, TODAY), faqLd(faq), ...events] }));
+}
+
 /* ---------- ガイドの入口 ---------- */
 {
   const path = 'guide/index.html';
@@ -242,7 +302,11 @@ ${faqHtml(faq)}`;
       <li><b>日程・申込締切・受験料</b><span>第${next.round}回${upcoming[1] ? `・第${upcoming[1].round}回` : ''}の申込期間、受験票、合格発表、持ち物</span><a class="go" href="business-accounting/schedule.html">読む ›</a></li>
       <li><b>合格率と難易度</b><span>回ごとの合格率の推移と、合格に必要な勉強量</span><a class="go" href="business-accounting/pass-rate.html">読む ›</a></li>
     </ul>
-    <p class="src">今後、銀行業務検定（財務3級）など、同じように「会社で受ける」検定を順に足していきます。</p>`;
+    <h2>銀行業務検定試験</h2>
+    <ul class="list">
+      <li><b>財務3級の概要・日程・合格率</b><span>出題形式、CBTと会場の違い、${zmNext ? `第${zmNext.round}回（${jp(zmNext.date)}）の申込期間` : '次回日程'}、勉強時間の目安</span><a class="go" href="ginko-zaimu3/">読む ›</a></li>
+    </ul>
+    <p class="src">同じように「会社で受ける」検定を順に足していきます。</p>`;
   const crumbs = [{ name: NAME, path: '' }, { name: '資格ガイド', path }];
   write(path, page({ path, title, desc, eyebrow: 'Guide', crumbs, body, depth: 1, jsonld: [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: title, description: desc, url: BASE + path, inLanguage: 'ja' }] }));
 }
@@ -277,19 +341,20 @@ ${faqHtml(faq)}`;
 
 /* ---------- sitemap / llms.txt ---------- */
 {
-  const pages = ['', 'about.html', 'guide/index.html', 'guide/business-accounting/index.html', 'guide/business-accounting/schedule.html', 'guide/business-accounting/pass-rate.html', 'terms.html', 'privacy.html', 'tokushoho.html'];
+  const pages = ['', 'about.html', 'guide/index.html', 'guide/business-accounting/index.html', 'guide/business-accounting/schedule.html', 'guide/business-accounting/pass-rate.html', 'guide/ginko-zaimu3/index.html', 'terms.html', 'privacy.html', 'tokushoho.html'];
   const norm = p => p.replace(/index\.html$/, '');
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${pages.map(p => `  <url><loc>${BASE + norm(p)}</loc><lastmod>${out.includes(p) ? TODAY : lastmod(p || 'index.html')}</lastmod></url>`).join('\n')}\n</urlset>\n`;
   writeFileSync('sitemap.xml', xml);
   writeFileSync('llms.txt', `# ${NAME}
 
-> 会社で受けることになる検定試験（ビジネス会計検定など）の学習アプリと、日程・締切・受験料・合格率の公開ガイド。主催団体とは関係のない独自教材。
+> 会社で受けることになる検定試験（ビジネス会計検定、銀行業務検定 財務3級）の学習アプリと、日程・締切・受験料・合格率の公開ガイド。主催団体とは関係のない独自教材。
 
 ## 公開ガイド（日付・数値は主催団体の公式サイトから取得。取得日を各ページに記載）
 
 - [ビジネス会計検定とは・3級と2級の違い](${BASE}guide/business-accounting/)
 - [第${next.round}回の日程・申込締切・受験料](${BASE}guide/business-accounting/schedule.html)
 - [合格率の推移と難易度](${BASE}guide/business-accounting/pass-rate.html)
+- [銀行業務検定 財務3級の概要・日程・合格率](${BASE}guide/ginko-zaimu3/)
 - [運営者情報](${BASE}about.html)
 
 ## アプリ
