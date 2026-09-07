@@ -196,9 +196,11 @@ async function page(opts = {}) {
   check('zm3 question shows five choices', (await p.$$('#quiz .choice')).length === 5);
   await p.click('#nav [data-view="sched"]'); await p.waitForTimeout(300);
   check('zm3 plan form offers CBT with a date field', !!(await p.$('#plan-round option[value="cbt"]')) && !!(await p.$('#plan-cbt-date')));
-  await p.selectOption('#plan-round', 'cbt'); await p.waitForTimeout(100);
+  await p.evaluate(() => { document.querySelector('#plan-details').open = true; }); await p.selectOption('#plan-round', 'cbt'); await p.waitForTimeout(100);
   check('CBT date field appears when CBT is chosen', await p.evaluate(() => !document.querySelector('#plan-cbt-wrap').hidden));
   await p.click('#nav [data-view="quiz"]'); await p.waitForTimeout(300);
+  await p.click('#quit'); await p.waitForTimeout(300);
+  if (await p.$('#dlg-ok')) { const open = await p.evaluate(()=>document.querySelector('#dlg').open); if (open) { await p.click('#dlg-ok'); await p.waitForTimeout(200); } }
   check('zm3 mock card counts 50 questions', /50問/.test(await p.textContent('#quiz')));
   await p.click('#exam-start'); await p.waitForTimeout(500);
   check('zm3 mock starts in 財務諸表 section', /財務諸表/.test(await p.textContent('#quiz .qhead')) && (await p.$$('#quiz .choice')).length === 5);

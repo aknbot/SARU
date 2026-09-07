@@ -345,10 +345,12 @@
     let preStart=null;
     if(total > W*2){ preStart=start; start=addDays(examDate, -(W*2)+1); total=W*2; }
     const scale = total>0 ? total/W : 1;
-    let durs=tpl.map(s=>Math.max(1, Math.round(s.days*scale)));
+    /* 試験当日のステップ（exam:true）は伸縮させない。余裕があっても「試験当日」が2日に広がらないように */
+    const fixed=tpl.map(s=>!!s.exam);
+    let durs=tpl.map((s,i)=>fixed[i]?s.days:Math.max(1, Math.round(s.days*scale)));
     let diff=durs.reduce((a,b)=>a+b,0)-Math.max(total, tpl.length);
     /* 合計を total に合わせる（大きいステップから調整） */
-    const order=tpl.map((s,i)=>i).sort((i,j)=>tpl[j].days-tpl[i].days);
+    const order=tpl.map((s,i)=>i).filter(i=>!fixed[i]).sort((i,j)=>tpl[j].days-tpl[i].days);
     let guard=0;
     while(diff!==0 && guard++<500){ for(const i of order){ if(diff===0) break; if(diff>0 && durs[i]>1){ durs[i]--; diff--; } else if(diff<0){ durs[i]++; diff++; } } }
     const steps=[]; let cur=start;
@@ -832,8 +834,12 @@
   function refFor(q){
     if(!course) return null;
     /* まず問題文だけで判定し、当たらなければ解説も含めて判定する（解説の脇道の語で別の見出しへ飛ばないように） */
+    /* 同じ本文で複数行が当たるときは、そのセットを扱うステップの read 章にある見出しを優先する（章をまたぐ語による誤誘導を減らす） */
+    const home=new Set((course.steps||[]).filter(st=>String(st.set)===String(q.d)).flatMap(st=>st.read||[]));
     for(const [text,pass] of [[q.q||'',1], [(q.q||'')+' '+(q.e||''),2]]){
-      for(const r of (course.refs||[])){ if(pass===1 && r.weak) continue; if(r.re.test(text)){ const hd=findHeading(r.h); const d=hd&&hd.closest('details.ch'); if(d) return {ch:d.id, h:r.h, hd}; } }
+      let first=null;
+      for(const r of (course.refs||[])){ if(pass===1 && r.weak) continue; if(!r.re.test(text)) continue; const hd=findHeading(r.h); const d=hd&&hd.closest('details.ch'); if(!d) continue; const hit={ch:d.id, h:r.h, hd}; if(home.has(d.id)) return hit; if(!first) first=hit; }
+      if(first) return first;
     }
     const ids=[...new Set((course.steps||[]).filter(st=>String(st.set)===String(q.d)).flatMap(st=>st.read||[]))].filter(id=>$('#'+id));
     if(!ids.length) return null;
