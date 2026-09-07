@@ -7,7 +7,8 @@
   "scripts": {
     "stamp": "node scripts/stamp-version.mjs",
     "test": "node tests/smoke.mjs",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "build:guide": "node scripts/build-guide.mjs"
   },
   "devDependencies": {
     "playwright": "^1.56.1"

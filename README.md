@@ -88,6 +88,10 @@ Project Settings → API Keys の **Project URL** と **publishable key**（`sb_
 - 公式テキスト・公式過去問題集の本文は転載していない。数値例は独自に作成したもの
 - 新しい回の試験が終わったら、TAC の解答速報ページ（https://www.tac-school.co.jp/kouza_boki/sokuhou_business_kaikei.html）の解説 PDF を読み、初出の論点を `notes.html` と `questions.js` に足す。公式テキストの改版・正誤表（https://www.b-accounting.jp/text/text.html）も確認する
 
+## 公開ガイド（検索・AI 向けの静的ページ）
+
+`guide/`（試験の概要・日程・合格率）、`about.html`、`sitemap.xml`、`llms.txt` は `npm run build:guide`（`scripts/build-guide.mjs`）が `exams.js` と `config.js` から生成する。**直接編集せず**、`exams.js` の日程や `PASS_RATES` を更新してから再生成する。`robots.txt` は検索エンジンと AI クローラー（GPTBot・ClaudeBot・PerplexityBot など）を許可し、`courses/` だけ除外している。公開後は Google Search Console と Bing Webmaster Tools に `sitemap.xml` を登録する。
+
 ## 法務ページの仕上げ
 
 `terms.html` / `privacy.html` / `tokushoho.html` の `<span class="ph">【…】</span>` を事業者情報に置き換える（事業者名・住所・連絡先・管轄裁判所・Supabase のリージョン）。`config.js` の `contactEmail` を入れると「お問い合わせ」リンクが出る。

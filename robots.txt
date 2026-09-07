@@ -1,4 +1,36 @@
+# 検索エンジンと AI アシスタントのクローラーを許可する。教材本体（courses/）はアプリ内でのみ使うので除外
 User-agent: *
 Allow: /
 Disallow: /courses/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /courses/
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /courses/
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+Disallow: /courses/
+
 Sitemap: https://aknbot.github.io/SARU/sitemap.xml

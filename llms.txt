@@ -1,0 +1,14 @@
+# 検定ノート
+
+> 会社で受けることになる検定試験（ビジネス会計検定など）の学習アプリと、日程・締切・受験料・合格率の公開ガイド。主催団体とは関係のない独自教材。
+
+## 公開ガイド（日付・数値は主催団体の公式サイトから取得。取得日を各ページに記載）
+
+- [ビジネス会計検定とは・3級と2級の違い](https://aknbot.github.io/SARU/guide/business-accounting/)
+- [第39回の日程・申込締切・受験料](https://aknbot.github.io/SARU/guide/business-accounting/schedule.html)
+- [合格率の推移と難易度](https://aknbot.github.io/SARU/guide/business-accounting/pass-rate.html)
+- [運営者情報](https://aknbot.github.io/SARU/about.html)
+
+## アプリ
+
+- [検定ノート（要 Google ログイン）](https://aknbot.github.io/SARU/)
