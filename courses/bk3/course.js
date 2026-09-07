@@ -1,6 +1,8 @@
 window.COURSES = window.COURSES || {};
 window.COURSES.bk3 = {
   id: 'bk3',
+  examName: 'ビジネス会計検定',           // リマインドの件名などに使う試験名
+  officialUrl: 'https://www.b-accounting.jp/',
   title: 'ビジネス会計3級 合格コース',
   short: 'ビジ会計3級',
   theme: { accent:'#8A5A12', accentSoft:'#F6EAD3', accentText:'#7A4E0C', accentInk:'#FFFFFF',

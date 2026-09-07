@@ -85,7 +85,7 @@
   }
   function renderGateCourses(){
     const el=$('#gate-course-list'); if(!el) return;
-    el.innerHTML=LIST.map(c=>{ const ex=nextExamFor(c.id); return '<div class="course" style="cursor:default"><div class="em" aria-hidden="true">'+esc(c.level||c.short||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p></div><div class="d">'+(ex?'第'+ex.round+'回<b>'+md(ex.date)+'</b>':'')+'</div></div>'; }).join('');
+    el.innerHTML=LIST.map(c=>{ const ex=nextExamFor(c.id); return '<div class="course" style="cursor:default"><div class="em" aria-hidden="true">'+esc(c.level||c.short||'')+'</div><div><p class="t">'+esc(c.title)+'</p><p class="s">'+esc(c.sub)+'</p></div><div class="d">'+(ex?''+lbl(ex)+'<b>'+md(ex.date)+'</b>':'')+'</div></div>'; }).join('');
     const total=LIST.reduce((n,c)=>n+num(c.questions),0); if(total){ $('#gate-qcount').textContent=String(total); const h=$('#hero-qcount'); if(h) h.textContent=String(total); }
   }
   renderGateCourses();
@@ -185,7 +185,7 @@
     else if(o.wrong&&typeof o.wrong==='object') Object.keys(o.wrong).forEach(id=>{ if(idOk(id)) s.wrong[id]=num(o.wrong[id],1); });
     if(o.cleared&&typeof o.cleared==='object') Object.keys(o.cleared).forEach(id=>{ if(idOk(id)) s.cleared[id]=num(o.cleared[id],1); });
     s.best={}; if(o.best&&typeof o.best==='object') Object.keys(o.best).forEach(k=>{ const b=o.best[k]; if(!b||typeof b!=='object') return; if(!/^(\d+|exam)$/.test(k)) return; const p=Math.max(0,Math.min(100,Math.round(num(b.p)))); const c=Math.max(0,Math.round(num(b.c))), t=Math.max(0,Math.round(num(b.t))); const e={p,c,t}; if(typeof b.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(b.date)) e.date=b.date; s.best[k]=e; });
-    if(o.plan&&typeof o.plan==='object'){ const r=num(o.plan.round), st=String(o.plan.start||''); if(r&&/^\d{4}-\d{2}-\d{2}$/.test(st)) s.plan={round:r,start:st,at:num(o.plan.at)}; }
+    if(o.plan&&typeof o.plan==='object'){ const r=o.plan.round==='cbt'?'cbt':num(o.plan.round), st=String(o.plan.start||''), dt=String(o.plan.date||''); if(r&&/^\d{4}-\d{2}-\d{2}$/.test(st)&&(r!=='cbt'||/^\d{4}-\d{2}-\d{2}$/.test(dt))){ s.plan={round:r,start:st,at:num(o.plan.at)}; if(r==='cbt') s.plan.date=dt; } }
     s.done=num(o.done); s.total=num(o.total);
     const clamp=v=>Math.floor(Math.max(0, Math.min(num(v), 8.64e15)));
     s.updatedAt=clamp(o.updatedAt); if(num(o.resetAt)>0) s.resetAt=clamp(o.resetAt);
@@ -316,19 +316,27 @@
   window.addEventListener('offline', ()=>{ if(course) setSync('offline','オフライン · 端末に保存中'); });
 
   /* =================== 試験回・学習予定 =================== */
+  var CBT=window.CBT||{};
+  /* 回のラベル（第N回 / CBT） */
+  function lbl(e){ return e?(e.label||('第'+e.round+'回')):''; }
+  /* 申込締切の正規化：{first, final, two（2段階か）, firstLabel, finalLabel} */
+  function applyInfo(ex){ if(!ex||!ex.apply) return null; const a=ex.apply; if(a.until) return {first:a.until, final:a.until, two:false, firstLabel:'', finalLabel:''}; const first=a.conv||a.card, fin=a.card||a.conv; return {first, final:fin, two:!!(a.conv&&a.card&&a.conv!==a.card), firstLabel:'コンビニ払い', finalLabel:'クレジットカード払い'}; }
+  /* CBT（随時受験）の回オブジェクトを、利用者が選んだ受験日から作る */
+  function cbtExam(cid, date){ const c=CBT[cid]; if(!c||!date) return null; const lv={}; lv[cid]=true; return {round:'cbt', label:'CBT', cbt:true, date, apply:{from:c.applyFrom, until:addDays(date,-3)}, applyFrom:c.applyFrom, levels:lv, info:c}; }
+  function planExam(cid, p){ return p&&p.round==='cbt' ? cbtExam(cid, p.date) : examByRound(cid, p?p.round:0); }
   function examsFor(cid){ return EXAMS.filter(e=>!e.levels || e.levels[cid]); }
   function nextExamFor(cid){ const t=todayStr(); return examsFor(cid).find(e=>e.date>=t) || examsFor(cid).slice(-1)[0] || null; }
   function examByRound(cid, round){ return examsFor(cid).find(e=>e.round===round) || null; }
   function ensurePlan(){
     if(!course) return;
     let p=mem.plan;
-    if(!p || !examByRound(course.id, p.round)){ const ex=nextExamFor(course.id); p={ round: ex?ex.round:0, start: todayStr(), at: Date.now() }; mem.plan=p; writeLocal(); }
+    if(!p || !planExam(course.id, p)){ const ex=nextExamFor(course.id); p={ round: ex?ex.round:0, start: todayStr(), at: Date.now() }; mem.plan=p; writeLocal(); }
     course.plan=buildPlan(course, p);
   }
   function templateSteps(c){ return (c.steps||[]).map(s=>({ n:s.n, days: s.days || (s.s&&s.e ? daysBetween(s.s,s.e)+1 : 3), title:s.title, read:s.read||[], set:s.set, desc:s.desc, exam:!!s.exam, first:!!s.first })); }
   /* 受験する回と開始日から、各ステップの日付を割り当てる */
   function buildPlan(c, p){
-    const ex=examByRound(c.id, p.round);
+    const ex=planExam(c.id, p);
     const examDate = ex ? ex.date : addDays(p.start, 45);
     const tpl=templateSteps(c);
     const W=tpl.reduce((n,s)=>n+s.days,0);
@@ -412,7 +420,7 @@
     /* 続きから */
     const rc=$('#resume-card'); let last=null; try{ last=localStorage.getItem('kn_last_'+uid()); }catch(e){}
     const lc=LIST.find(c=>c.id===last);
-    if(lc){ const s=courseStateSummary(lc.id); const step=s.st.plan ? null : null; rc.innerHTML='<div class="card today resume"><p class="eyebrow">続きから</p><h2 style="font-size:19px;margin-bottom:4px">'+esc(lc.title)+'</h2><p class="small muted" style="margin:0">'+esc(s.text)+(s.ex&&s.d>0?' · 第'+s.ex.round+'回まで '+s.d+' 日':'')+'</p><a class="btn primary" href="#/c/'+lc.id+'/home">今日の学習を始める</a></div>'; }
+    if(lc){ const s=courseStateSummary(lc.id); const step=s.st.plan ? null : null; rc.innerHTML='<div class="card today resume"><p class="eyebrow">続きから</p><h2 style="font-size:19px;margin-bottom:4px">'+esc(lc.title)+'</h2><p class="small muted" style="margin:0">'+esc(s.text)+(s.ex&&s.d>0?' · '+lbl(s.ex)+'まで '+s.d+' 日':'')+'</p><a class="btn primary" href="#/c/'+lc.id+'/home">今日の学習を始める</a></div>'; }
     else rc.innerHTML='';
   }
 
@@ -487,7 +495,7 @@
   function renderCountdown(){
     if(!course) return;
     const ex=course.plan.exam; const d=daysUntil(course.plan.examDate);
-    $('#countdown').innerHTML=(ex?'第'+ex.round+'回 · ':'')+(d>0?'試験まで <b>'+d+'</b> 日':d===0?'<b>今日が試験日</b>':'試験終了');
+    $('#countdown').innerHTML=(ex?''+lbl(ex)+' · ':'')+(d>0?'試験まで <b>'+d+'</b> 日':d===0?'<b>今日が試験日</b>':'試験終了');
   }
   function rerenderAll(){ if(!course) return; ensurePlan(); if(!homeManual) homeStep=homeIndex(); renderHome(); renderSched(); applySheet(); renderCountdown(); if($('#v-quiz').classList.contains('on') && !quiz.active) renderSetPicker(); }
 
@@ -496,12 +504,12 @@
     const c=course, lv=LEVELS[c.id]||{}, ex=course.plan.exam;
     const pr=PASS[c.id]||[]; const latest=pr[0]; const vals=pr.map(x=>x[1]); const lo=vals.length?Math.min.apply(null,vals):0, hi=vals.length?Math.max.apply(null,vals):0;
     const facts=[];
-    if(ex){ facts.push({l:'試験日', v:md(ex.date), s:'第'+ex.round+'回 · '+jpDate(ex.date).slice(-3)+(lv.gather?' '+lv.gather+'集合':'')}); facts.push({l:'申込締切', v:md(ex.apply.conv), s:'コンビニ ／ クレカ '+md(ex.apply.card)}); }
-    facts.push({l:'形式・時間', v:'マークシート', s:'試験時間 '+(lv.minutes?lv.minutes/60+'時間':'2時間')+'・会場受験', text:true});
-    facts.push({l:'合格基準', v:'70', s:'点 ／ 100点'});
+    if(ex){ const ai=applyInfo(ex); facts.push({l:ex.cbt?'受験日':'試験日', v:md(ex.date), s:lbl(ex)+' · '+jpDate(ex.date).slice(-3)+(lv.gather&&!ex.cbt?' '+lv.gather+'集合':'')}); if(ai) facts.push({l:ex.cbt?'予約の目安':'申込締切', v:md(ai.first), s:ai.two?'コンビニ ／ クレカ '+md(ai.final):(ex.cbt?'受験日の3日前まで':'受付締切')}); }
+    facts.push({l:'形式・時間', v:lv.format||'マークシート', s:'試験時間 '+(lv.minutes?(lv.minutes%60?lv.minutes+'分':lv.minutes/60+'時間'):'2時間')+(ex&&ex.cbt?'・テストセンター':'・会場受験'), text:true});
+    facts.push({l:'合格基準', v:String(lv.pass||70), s:'点 ／ 100点'});
     if(latest) facts.push({l:'合格率', v:latest[1]+'%', s:'第'+latest[0]+'回（直近'+pr.length+'回 '+Math.round(lo)+'〜'+Math.round(hi)+'%）'});
     if(lv.fee) facts.push({l:'受験料', v:lv.fee.toLocaleString()+'円', s:'税込', text:true});
-    facts.push({l:'電卓', v:'持込可', s:'（四則演算のみ・無音）', text:true});
+    if(lv.calc) facts.push({l:'電卓', v:lv.calc.v||'持込可', s:lv.calc.s||'', text:true}); else facts.push({l:'電卓', v:'持込可', s:'（四則演算のみ・無音）', text:true});
     return '<div class="facts">'+facts.map(f=>'<div class="fact"><div class="l">'+esc(f.l)+'</div><div class="v"'+(f.text?' style="font-family:var(--font-body);font-size:14px;font-weight:700"':'')+'>'+esc(f.v)+(f.s?(f.text?'<br>':' ')+'<small>'+esc(f.s)+'</small>':'')+'</div></div>').join('')+'</div>'+(c.factsNote?'<p class="small muted" style="margin:12px 0 0">'+c.factsNote+'</p>':'')+'<p class="small muted" style="margin:8px 0 0">日程・受験料は変更されることがあります。必ず<a href="https://www.b-accounting.jp/" target="_blank" rel="noopener">公式サイト</a>で最新情報をご確認ください。</p>';
   }
   function renderStatic(){
@@ -514,15 +522,16 @@
   /* =================== リマインド（カレンダー） =================== */
   function reminderEvents(){
     const c=course, ex=c.plan.exam, lv=LEVELS[c.id]||{}; if(!ex) return [];
-    const t=todayStr(), applied=!!store.get('applied',false), name='第'+ex.round+'回 ビジネス会計検定 '+(lv.name||'');
+    const t=todayStr(), applied=!!store.get('applied',false), name=lbl(ex)+' '+(c.examName||'ビジネス会計検定')+' '+(lv.name||''); const ai=applyInfo(ex); const site=c.officialUrl||'https://www.b-accounting.jp/';
     const evs=[];
-    if(!applied && ex.apply){
-      if(ex.apply.conv) evs.push({date:ex.apply.conv, title:name+' 申込締切（コンビニ払い）', desc:'公式サイト https://www.b-accounting.jp/ の「受験申込」から。'});
-      if(ex.apply.card) evs.push({date:ex.apply.card, title:name+' 申込締切（クレジットカード払い）', desc:'公式サイト https://www.b-accounting.jp/ の「受験申込」から。'});
+    if(!applied && ai){
+      if(ex.cbt) evs.push({date:ai.final, title:name+' 予約の目安（受験日の3日前）', desc:'CBT-Solutions のマイページから予約。申込日の3日目以降を予約できる。'});
+      else if(ai.two){ evs.push({date:ai.first, title:name+' 申込締切（'+ai.firstLabel+'）', desc:'公式サイト '+site+' から。'}); evs.push({date:ai.final, title:name+' 申込締切（'+ai.finalLabel+'）', desc:'公式サイト '+site+' から。'}); }
+      else evs.push({date:ai.final, title:name+' 申込締切', desc:'公式サイト '+site+' から。'});
     }
-    if(ex.ticket) evs.push({date:ex.ticket, title:name+' 受験票の到着めやす', desc:(ex.ticketAsk?'届いていなければ '+jpDate(ex.ticketAsk[0])+'〜'+jpDate(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')});
-    if(lv.gather){ const [h,m]=lv.gather.split(':').map(Number); const end=new Date(2000,0,1,h,m+(lv.minutes||120)+30); evs.push({date:ex.date, time:lv.gather, endTime:String(end.getHours()).padStart(2,'0')+':'+String(end.getMinutes()).padStart(2,'0'), title:name+' 試験日（集合 '+lv.gather+'）', desc:'持ち物：受験票・顔写真付き身分証明書（原本）・HBかBの鉛筆かシャープペン・消しゴム・電卓（四則演算のみ）。'}); }
-    else evs.push({date:ex.date, title:name+' 試験日', desc:''});
+    if(ex.ticket && !ex.cbt) evs.push({date:ex.ticket, title:name+' 受験票の到着めやす', desc:(ex.ticketAsk?'届いていなければ '+jpDate(ex.ticketAsk[0])+'〜'+jpDate(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')});
+    if(lv.gather && !ex.cbt){ const [h,m]=lv.gather.split(':').map(Number); const end=new Date(2000,0,1,h,m+(lv.minutes||120)+30); evs.push({date:ex.date, time:lv.gather, endTime:String(end.getHours()).padStart(2,'0')+':'+String(end.getMinutes()).padStart(2,'0'), title:name+' 試験日（集合 '+lv.gather+'）', desc:'持ち物：受験票・顔写真付き身分証明書（原本）・HBかBの鉛筆かシャープペン・消しゴム・電卓（四則演算のみ）。'}); }
+    else evs.push({date:ex.date, title:name+(ex.cbt?' 受験日（CBT・予約した日）':' 試験日'), desc:ex.cbt?'本人確認書類を持参。電卓は画面上のものを使う。':''});
     if(ex.result) evs.push({date:ex.result, title:name+' 合格発表', desc:'公式サイトで確認。'});
     return evs.filter(e=>e.date>=t);
   }
@@ -577,22 +586,26 @@
     const c=course, p=course.plan;
     const ex=p.exam;
     const planForm='<div class="plan-form">'+
-      '<label>受験する回<select id="plan-round">'+examsFor(c.id).map(e=>'<option value="'+e.round+'"'+(e.round===p.round?' selected':'')+'>第'+e.round+'回 · '+jpDateY(e.date)+(e.date<todayStr()?'（終了）':'')+'</option>').join('')+'</select></label>'+
+      '<label>受験する回<select id="plan-round">'+examsFor(c.id).map(e=>'<option value="'+e.round+'"'+(e.round===p.round?' selected':'')+'>'+lbl(e)+' · '+jpDateY(e.date)+(e.date<todayStr()?'（終了）':'')+'</option>').join('')+(CBT[c.id]?'<option value="cbt"'+(p.round==='cbt'?' selected':'')+'>CBT（テストセンターで受験日を選ぶ）</option>':'')+'</select></label>'+
+      (CBT[c.id]?'<label id="plan-cbt-wrap"'+(p.round==='cbt'?'':' hidden')+'>受験日（CBT）<input type="date" id="plan-cbt-date" value="'+esc(mem.plan.date||'')+'" min="'+esc(addDays(todayStr(),3))+'" max="'+esc(CBT[c.id].to)+'"><span class="small muted">受付 '+jpDate(CBT[c.id].applyFrom)+'〜'+jpDate(CBT[c.id].applyTo)+'、受験可能期間は '+jpDate(CBT[c.id].to)+' まで。申込日の3日目以降を予約できる。</span></label>':'')+
       '<label>学習の開始日<input type="date" id="plan-start" value="'+esc(mem.plan.start)+'" max="'+esc(p.examDate)+'"></label>'+
       '<div class="row"><button type="button" class="btn primary small" id="plan-apply">この設定で予定を組み直す</button><span class="small muted">'+(p.compressed?'試験までの日数が標準（'+p.templateDays+'日）より短いため、圧縮した予定です。':'標準 '+p.templateDays+'日の予定を、試験日に合わせて配分しています。')+'</span></div></div>';
     $('#sched-info').innerHTML=
       '<details class="info" id="plan-details"><summary>受験する回・開始日を変更</summary><div class="body">'+planForm+'</div></details>'+
-      '<details class="info"><summary>試験概要'+(ex?'（第'+ex.round+'回）':'')+'</summary><div class="body">'+factsHtml()+'</div></details>'+
+      '<details class="info"><summary>試験概要'+(ex?'（'+lbl(ex)+'）':'')+'</summary><div class="body">'+factsHtml()+'</div></details>'+
       '<details class="info"><summary>毎日の回し方</summary><div class="body"><ol class="steps">'+(c.howto||[]).map(h=>'<li><span class="t">'+esc(h.t)+'</span><span>'+h.html+'</span><span></span></li>').join('')+'</ol>'+(c.howtoNote?'<p class="small muted" style="margin:10px 0 0">'+c.howtoNote+'</p>':'')+'</div></details>'+
       '<details class="info"><summary>当日の動き方</summary><div class="body"><ul class="b small">'+(c.examDay||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul></div></details>'+
       '<details class="info" id="rem-details"><summary>リマインド（カレンダーに入れる）</summary><div class="body">'+remindersHtml()+'</div></details>';
     bindReminders();
+    const prs=$('#plan-round'), pcw=$('#plan-cbt-wrap'); if(prs&&pcw) prs.addEventListener('change', ()=>{ pcw.hidden=prs.value!=='cbt'; });
     $('#plan-apply').addEventListener('click', ()=>{
-      const round=Number($('#plan-round').value); const start=$('#plan-start').value||todayStr();
-      const exd=(examByRound(c.id, round)||{}).date; if(exd && start>exd){ toast('開始日は試験日（'+jpDate(exd)+'）より前にしてください。'); return; }
-      mem.plan={round, start, at:Date.now()}; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast('予定を組み直しました。');
+      const rv=$('#plan-round').value; const round=rv==='cbt'?'cbt':Number(rv); const start=$('#plan-start').value||todayStr();
+      let date;
+      if(round==='cbt'){ date=$('#plan-cbt-date').value; const cb=CBT[c.id]; if(!date){ toast('CBT の受験日を入れてください。'); return; } if(cb && (date<cb.from||date>cb.to)){ toast('受験日は '+jpDate(cb.from)+'〜'+jpDate(cb.to)+' の間にしてください。'); return; } }
+      const exd=round==='cbt'?date:(examByRound(c.id, round)||{}).date; if(exd && start>exd){ toast('開始日は試験日（'+jpDate(exd)+'）より前にしてください。'); return; }
+      mem.plan={round, start, at:Date.now()}; if(round==='cbt') mem.plan.date=date; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast('予定を組み直しました。');
     });
-    $('#sched-note').textContent=(p.exam?jpDate(p.start)+'から第'+p.exam.round+'回（'+jpDate(p.examDate)+'）まで、':'')+STEPS().length+'ステップ。終わったステップはチェックを入れる。遅れたら次のステップに進まず、今のステップを縮めて追いつく。';
+    $('#sched-note').textContent=(p.exam?jpDate(p.start)+'から'+lbl(p.exam)+'（'+jpDate(p.examDate)+'）まで、':'')+STEPS().length+'ステップ。終わったステップはチェックを入れる。遅れたら次のステップに進まず、今のステップを縮めて追いつく。';
   }
 
   /* =================== 今日・予定 =================== */
@@ -607,31 +620,41 @@
     const later=examsFor(course.id).find(e=>e.date>ex.date);
     let html='';
     const notOpen = ex.applyFrom && t<ex.applyFrom;
+    const ai=applyInfo(ex); const site=course.officialUrl||'https://www.b-accounting.jp/'; const fee=(LEVELS[course.id]&&LEVELS[course.id].fee)?'受験料 '+LEVELS[course.id].fee.toLocaleString()+'円（税込）。':'';
+    const chk=(label,color)=>'<label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" style="width:20px;height:20px;accent-color:var(--'+(color||'accent')+')"> '+label+'</label>';
+    if(ex.cbt){
+      const cb=ex.info||{};
+      if(applied) html='<div class="card"><p class="eyebrow">CBT</p><label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> '+jpDate(ex.date)+' に予約済み</label><p class="small muted" style="margin:6px 0 0">受験票はありません。予約確認メールとマイページで会場と時刻を確認。当日は本人確認書類を持参。</p></div>';
+      else if(t<=ex.date) html='<div class="card warn"><p class="eyebrow" style="color:var(--warn-text)">CBT の予約</p><p style="margin:0"><b>受験日 '+jpDate(ex.date)+' の3日前（'+jpDate(ai.final)+'）までに予約。</b>受付は '+(cb.applyFrom?jpDate(cb.applyFrom)+'〜':'')+(cb.applyTo?jpDate(cb.applyTo):'')+'。CBT-Solutions（<a href="'+esc(cb.url||'https://cbt-s.com/')+'" target="_blank" rel="noopener">cbt-s.com</a>）の受験者マイページで会場と時刻を選ぶ。'+fee+'</p>'+chk('予約済み','warn')+'</div>';
+      el.innerHTML=html; const ap0=$('#applied'); if(ap0) ap0.addEventListener('change', e=>{ store.set('applied', e.target.checked); toast(e.target.checked?'予約済みとして記録しました。':'未予約に戻しました。'); renderHome(); }); return;
+    }
+    const dlText = ai ? (ai.two ? jpDate(ai.first)+'＝'+ai.firstLabel+' ／ '+jpDate(ai.final)+'＝'+ai.finalLabel+'。' : jpDate(ai.final)+'。') : '';
+    const dlShort = ai ? (ai.two ? md(ai.first)+'（コンビニ）／'+md(ai.final)+'（クレカ）' : md(ai.final)) : '';
     if(applied){
-      if(ex.ticket && t>=addDays(ex.ticket,-7) && t<=ex.date) html='<div class="card"><p class="eyebrow">受験票</p><p style="margin:0" class="small">受験票は '+jpDate(ex.ticket)+' 発送予定。'+(ex.ticketAsk?'届かない場合は '+md(ex.ticketAsk[0])+'・'+md(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')+'</p><label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> 第'+ex.round+'回 申込済み</label></div>';
-      else if(t<=ex.date) html='<div class="card"><p class="eyebrow">申込</p><label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> 第'+ex.round+'回 申込済み</label><p class="small muted" style="margin:6px 0 0">チェックを外すと締切の案内を再表示します。</p></div>';
+      if(ex.ticket && t>=addDays(ex.ticket,-7) && t<=ex.date) html='<div class="card"><p class="eyebrow">受験票</p><p style="margin:0" class="small">受験票は '+jpDate(ex.ticket)+' 発送予定。'+(ex.ticketAsk?'届かない場合は '+md(ex.ticketAsk[0])+'・'+md(ex.ticketAsk[1])+' に検定試験センターへ問い合わせ。':'')+'</p><label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> '+lbl(ex)+' 申込済み</label></div>';
+      else if(t<=ex.date) html='<div class="card"><p class="eyebrow">申込</p><label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" checked style="width:20px;height:20px;accent-color:var(--accent)"> '+lbl(ex)+' 申込済み</label><p class="small muted" style="margin:6px 0 0">チェックを外すと締切の案内を再表示します。</p></div>';
     } else if(notOpen){
-      html='<div class="card"><p class="eyebrow">申込</p><p class="small" style="margin:0">第'+ex.round+'回の申込受付は '+jpDate(ex.applyFrom)+' から。締切は '+md(ex.apply.conv)+'（コンビニ）／'+md(ex.apply.card)+'（クレカ）。受付が始まったらここに案内が出ます。</p></div>';
-    } else if(t<=ex.apply.card){
-      const closedConv = t>ex.apply.conv;
-      html='<div class="card warn"><p class="eyebrow" style="color:var(--warn-text)">まず申込</p><p style="margin:0"><b>第'+ex.round+'回の申込締切：'+jpDate(ex.apply.conv)+'＝コンビニ払い ／ '+jpDate(ex.apply.card)+'＝クレジットカード払い。</b>'+(closedConv?'コンビニ払いは受付終了。クレジットカード払いのみ受付中。':'')+'公式サイト（<a href="https://www.b-accounting.jp/" target="_blank" rel="noopener">b-accounting.jp</a>）の「受験申込」から申し込む。'+(LEVELS[course.id]&&LEVELS[course.id].fee?'受験料 '+LEVELS[course.id].fee.toLocaleString()+'円（税込）。':'')+'</p><label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" style="width:20px;height:20px;accent-color:var(--warn)"> 申込済み</label></div>';
+      html='<div class="card"><p class="eyebrow">申込</p><p class="small" style="margin:0">'+lbl(ex)+'の申込受付は '+jpDate(ex.applyFrom)+' から。締切は '+dlShort+'。受付が始まったらここに案内が出ます。</p></div>';
+    } else if(ai && t<=ai.final){
+      const closedFirst = ai.two && t>ai.first;
+      html='<div class="card warn"><p class="eyebrow" style="color:var(--warn-text)">まず申込</p><p style="margin:0"><b>'+lbl(ex)+'の申込締切：'+dlText+'</b>'+(closedFirst?ai.firstLabel+'は受付終了。'+ai.finalLabel+'のみ受付中。':'')+'公式サイト（<a href="'+esc(site)+'" target="_blank" rel="noopener">'+esc(site.replace(/^https?:\/\//,'').replace(/\/$/,''))+'</a>）から申し込む。'+fee+'</p>'+chk('申込済み','warn')+'</div>';
     } else if(t<=ex.date){
-      html='<div class="card aka"><p class="eyebrow" style="color:var(--aka-text)">申込は締め切られました</p><p style="margin:0" class="small">第'+ex.round+'回（'+jpDate(ex.date)+'）の申込受付は終了しています。'+(later?'次回 第'+later.round+'回は '+jpDateY(later.date)+'。申込は '+(later.applyFrom?jpDate(later.applyFrom)+'〜':'')+md(later.apply.conv)+'（コンビニ）／'+md(later.apply.card)+'（クレカ）。':'次回の日程は公式サイトで公開され次第、反映します。')+'</p><div class="row" style="margin-top:10px">'+(later?'<button type="button" class="btn small primary" id="switch-round" data-round="'+later.round+'">第'+later.round+'回に向けた予定に切り替える</button>':'')+'<label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" style="width:20px;height:20px;accent-color:var(--accent)"> 申込済みだった</label></div></div>';
+      html='<div class="card aka"><p class="eyebrow" style="color:var(--aka-text)">申込は締め切られました</p><p style="margin:0" class="small">'+lbl(ex)+'（'+jpDate(ex.date)+'）の申込受付は終了しています。'+(later?'次回 '+lbl(later)+'は '+jpDateY(later.date)+'。申込は '+(later.applyFrom?jpDate(later.applyFrom)+'〜':'')+(applyInfo(later)?(applyInfo(later).two?md(applyInfo(later).first)+'（コンビニ）／'+md(applyInfo(later).final)+'（クレカ）':md(applyInfo(later).final)):'')+'。':'次回の日程は公式サイトで公開され次第、反映します。')+'</p><div class="row" style="margin-top:10px">'+(later?'<button type="button" class="btn small primary" id="switch-round" data-round="'+later.round+'">'+lbl(later)+'に向けた予定に切り替える</button>':'')+'<label style="display:flex;gap:8px;align-items:center;font-weight:700;cursor:pointer"><input type="checkbox" id="applied" style="width:20px;height:20px;accent-color:var(--accent)"> 申込済みだった</label></div></div>';
     }
     el.innerHTML=html;
     const ap=$('#applied'); if(ap) ap.addEventListener('change', e=>{ store.set('applied', e.target.checked); toast(e.target.checked?'申込済みとして記録しました。':'未申込に戻しました。'); renderHome(); });
     const sw=$('#switch-round'); if(sw) sw.addEventListener('click', ()=>switchRound(Number(sw.dataset.round)));
   }
   async function switchRound(round){
-    if(!(await ask({title:'第'+round+'回の予定に切り替えますか？', body:'今の回の完了チェックと申込状況はリセットされます（正答率・復習リストは残ります）。', ok:'切り替える', danger:true}))) return;
+    if(!(await ask({title:lbl(examByRound(course.id, round)||{round})+'の予定に切り替えますか？', body:'今の回の完了チェックと申込状況はリセットされます（正答率・復習リストは残ります）。', ok:'切り替える', danger:true}))) return;
     const now=Date.now(); const u=Object.assign({},store.get('unsched',{})); Object.keys(store.get('sched',{})).forEach(n=>{ u[n]=now; });
-    mem.plan={round, start:todayStr(), at:now}; mem.sched={}; mem.unsched=u; mem.applied=false; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast('第'+round+'回に向けた予定に切り替えました。');
+    mem.plan={round, start:todayStr(), at:now}; mem.sched={}; mem.unsched=u; mem.applied=false; touch(); ensurePlan(); homeManual=false; rerenderAll(); toast(lbl(examByRound(course.id, round)||{round})+'に向けた予定に切り替えました。');
   }
   function renderPlanNotice(){
     const el=$('#plan-notice'); const p=course.plan; const t=todayStr();
     const later=examsFor(course.id).find(e=>e.date>p.examDate);
     if(p.examDate < t){
-      el.innerHTML='<div class="card aka"><p class="eyebrow" style="color:var(--aka-text)">第'+p.round+'回は終了しました</p><p class="small" style="margin:0">お疲れさまでした。'+(later?'次回 第'+later.round+'回（'+jpDateY(later.date)+'）に向けて、予定を組み直せます。':'次回の日程が公開され次第、反映します。それまでは復習リストとノートで維持を。')+'</p>'+(later?'<button type="button" class="btn small primary" style="margin-top:10px" id="switch-round2" data-round="'+later.round+'">第'+later.round+'回の予定を作る</button>':'')+'</div>';
+      el.innerHTML='<div class="card aka"><p class="eyebrow" style="color:var(--aka-text)">'+lbl(p)+'は終了しました</p><p class="small" style="margin:0">お疲れさまでした。'+(later?'次回 '+lbl(later)+'（'+jpDateY(later.date)+'）に向けて、予定を組み直せます。':'次回の日程が公開され次第、反映します。それまでは復習リストとノートで維持を。')+'</p>'+(later?'<button type="button" class="btn small primary" style="margin-top:10px" id="switch-round2" data-round="'+later.round+'">'+lbl(later)+'の予定を作る</button>':'')+'</div>';
       const b=$('#switch-round2'); if(b) b.addEventListener('click', ()=>switchRound(Number(b.dataset.round)));
     } else if(p.preStart && t < p.start){
       el.innerHTML='<div class="card"><p class="eyebrow">計画開始まで '+daysUntil(p.start)+' 日</p><p class="small muted" style="margin:0">試験までの日数に余裕があるため、予定は '+jpDate(p.start)+' から始まります。先取りして進めても構いません。開始日は「予定」タブで変更できます。</p></div>';
@@ -656,7 +679,7 @@
       steps+='<li><span class="t">10分</span><span>問題セット '+esc(d.set)+' を10問'+(b?'<span class="chip '+(b.p>=80?'ok':b.p<70?'aka':'')+'" style="margin-left:6px">'+b.p+'%</span>':'')+'</span><span><button class="btn small primary" data-set="'+esc(d.set)+'">解く</button></span></li>';
       steps+='<li><span class="t">5分</span><span>間違えた問題の解説を読み直す</span><span><button class="btn small" data-set="wrong">復習</button></span></li>';
     }
-    const exx=c.plan.exam; const flag = (d.n===S[0].n && !store.get('applied',false) && exx && todayStr()<=exx.apply.card && !(exx.applyFrom && todayStr()<exx.applyFrom)) ? '<span class="chip warn">まず申込</span>' : '';
+    const exx=c.plan.exam; const flag = (d.n===S[0].n && !store.get('applied',false) && exx && applyInfo(exx) && todayStr()<=applyInfo(exx).final && !(exx.applyFrom && todayStr()<exx.applyFrom)) ? '<span class="chip warn">'+(exx.cbt?'まず予約':'まず申込')+'</span>' : '';
     $('#today-card').innerHTML=
       '<div class="row" style="justify-content:space-between;margin-bottom:4px"><span class="daynum">STEP '+String(d.n).padStart(2,'0')+' · '+range(d)+(isNow?' · 今ここ':ahead?' · 予定より先行':'')+'</span>'+
       '<span class="row" style="gap:4px"><button class="btn small ghost icon" id="day-prev" aria-label="前のステップ" '+(homeStep===0?'disabled':'')+'><span aria-hidden="true">‹</span></button><button class="btn small ghost icon" id="day-next" aria-label="次のステップ" '+(homeStep===S.length-1?'disabled':'')+'><span aria-hidden="true">›</span></button></span></div>'+
@@ -871,6 +894,11 @@
   function abortExam(){ clearInterval(exam.timer); exam.timer=null; exam.active=false; }
   function buildExamList(){
     const cfg=course.mock; const all=Q();
+    if(cfg.parts){
+      let list=[]; const parts=[];
+      cfg.parts.forEach(pt=>{ const sets=(pt.sets||[]).map(String); const pool=shuffle(all.filter(q=>!q.adv && sets.includes(String(q.d)))).slice(0, pt.n); parts.push({name:pt.name, n:pool.length}); list=list.concat(pool); });
+      return { list, sec:{parts} };
+    }
     const tf=shuffle(all.filter(q=>q.f&&!q.ds&&!q.adv)).slice(0,cfg.tf);
     const single=shuffle(all.filter(q=>!q.f&&!q.ds&&!q.adv)).slice(0,cfg.single);
     const dsIds=shuffle(Object.keys(course.datasets||{})); let data=[];
@@ -898,7 +926,10 @@
   }
   function orderFor(q){ const o=q.c.map((_,i)=>i); return q.f?o:shuffle(o); }
   function tick(){ if(!exam.active) return; const el=$('#exam-timer'); const left=Math.max(0, exam.end-Date.now()); if(el){ el.textContent=fmtLeft(exam.end); el.classList.toggle('warn', left<10*60000); } [10,5,1].forEach(m=>{ if(left<=m*60000 && left>0 && !warned[m]){ warned[m]=true; toast('残り'+m+'分です。'); } }); if(left<=0){ clearInterval(exam.timer); if(dlgResolve) closeDlg(false); toast('時間切れです。採点します。'); finishExam(); } }
-  function secName(i){ return i<exam.sec.tf?'Ⅰ 正誤判定':i<exam.sec.tf+exam.sec.single?'Ⅱ 個別問題':'Ⅲ 総合問題'; }
+  const ROMAN=['Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ'];
+  function examSecs(){ const s=exam.sec||{}; if(s.parts) return s.parts.map((p,i)=>({name:ROMAN[i]+' '+p.name, n:p.n})); return [{name:'Ⅰ 正誤判定', n:s.tf||0},{name:'Ⅱ 個別問題', n:s.single||0},{name:'Ⅲ 総合問題', n:s.data||0}]; }
+  function secIndex(i){ let acc=0; const secs=examSecs(); for(let k=0;k<secs.length;k++){ acc+=secs[k].n; if(i<acc) return k; } return secs.length-1; }
+  function secName(i){ return examSecs()[secIndex(i)].name; }
   function renderExamQ(){
     if(!exam.active) return;
     if(exam.end-Date.now()<=0){ tick(); return; }
@@ -922,16 +953,16 @@
   }
   function finishExam(){
     clearInterval(exam.timer); exam.timer=null; exam.active=false; quiz.active=false; clearSavedExam();
-    const L=exam.list; let c=0; const secC=[0,0,0], secT=[exam.sec.tf, exam.sec.single, exam.sec.data]; const wrongQ=[];
+    const L=exam.list; let c=0; const secs=examSecs(); const secC=secs.map(()=>0), secT=secs.map(x=>x.n); const wrongQ=[];
     const now=Date.now(); const wrong=Object.assign({},store.get('wrong',{})), cleared=Object.assign({},store.get('cleared',{}));
-    L.forEach((q,i)=>{ const s=i<exam.sec.tf?0:i<exam.sec.tf+exam.sec.single?1:2; if(exam.ans[i]===q.a){ c++; secC[s]++; delete wrong[q.id]; cleared[q.id]=now; } else { wrongQ.push(q); wrong[q.id]=now; } });
+    L.forEach((q,i)=>{ const s=secIndex(i); if(exam.ans[i]===q.a){ c++; secC[s]++; delete wrong[q.id]; cleared[q.id]=now; } else { wrongQ.push(q); wrong[q.id]=now; } });
     mem.wrong=wrong; mem.cleared=cleared;
-    const p=Math.round(c/L.length*100); const pass=p>=70;
+    const passMark=(course.mock&&course.mock.pass)||(LEVELS[course.id]&&LEVELS[course.id].pass)||70; const p=Math.round(c/L.length*100); const pass=p>=passMark;
     const best=store.get('best',{}); if(!best.exam||p>=best.exam.p) best.exam={p, c, t:L.length, date:todayStr()}; mem.best=best; touch();
-    const secNames=['Ⅰ 正誤判定','Ⅱ 個別問題','Ⅲ 総合問題'];
+    const secNames=secs.map(x=>x.name);
     $('#quiz').innerHTML=
       '<div class="card" style="text-align:center"><p class="eyebrow">模試の結果</p><div class="score">'+p+'<small>点</small></div><p class="mono muted" style="margin:0 0 8px">'+c+' / '+L.length+' 問正解</p>'+
-      '<p style="margin:0;font-weight:700;font-size:18px;color:'+(pass?'var(--ok-text)':'var(--aka-text)')+'">'+(pass?'合格ライン（70点）クリア':'あと '+(Math.ceil(L.length*0.7)-c)+' 問で合格ライン')+'</p>'+
+      '<p style="margin:0;font-weight:700;font-size:18px;color:'+(pass?'var(--ok-text)':'var(--aka-text)')+'">'+(pass?'合格ライン（'+passMark+'点）クリア':'あと '+(Math.ceil(L.length*passMark/100)-c)+' 問で合格ライン')+'</p>'+
       '<div class="tw" style="margin-top:12px"><table><tr><th>大問</th><th>正解</th><th>正答率</th></tr>'+secNames.map((n,i)=>'<tr><td>'+n+'</td><td>'+secC[i]+' / '+secT[i]+'</td><td>'+(secT[i]?Math.round(secC[i]/secT[i]*100):0)+'%</td></tr>').join('')+'</table></div></div>'+
       '<div class="stack">'+(wrongQ.length?'<button type="button" class="btn primary block" id="retry-wrong">間違えた '+wrongQ.length+' 問を解説付きでやり直す</button>':'')+'<button type="button" class="btn block" id="exam-again">もう一度模試を受ける</button><button type="button" class="btn ghost block" id="back">セット選択へ戻る</button></div>'+
       (wrongQ.length?'<div class="card" style="margin-top:14px"><p class="eyebrow">復習</p><h2 style="font-size:18px">間違えた問題</h2>'+wrongQ.map(q=>'<div class="review"><p class="q" style="margin:0 0 4px">'+esc(q.q)+'</p><p style="margin:0 0 4px"><span class="a">正解：'+esc(q.c[q.a])+'</span></p><p class="small muted" style="margin:0">'+esc(q.e)+'</p>'+refHtml(q)+'</div>').join('')+'</div>':'');
