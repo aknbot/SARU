@@ -1,5 +1,6 @@
 // 検定ノート smoke test (Playwright). 使い方: node tests/smoke.mjs [baseUrl]
 // baseUrl 省略時はリポジトリ直下を簡易サーバーで配信して検証する。
+import { readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -28,6 +29,7 @@ const FAKE_SUPABASE = `window.supabase={createClient(){return{auth:{
   async refreshSession(){return{data:{session:window.__session||null},error:null}} },
   from(){const q={select(){return q},eq(){return q},async maybeSingle(){return{data:null,error:null}},async upsert(){return{error:null}},async delete(){return q}};return q},
   async rpc(){return{error:null}} }}};`;
+const CONFIG_GUEST = readFileSync(new URL('../config.js', import.meta.url), 'utf8').replace(/allowGuest:\s*false/, 'allowGuest: true');
 const USER = { id: 'u-test', email: 'test@example.com', user_metadata: { full_name: 'テスト太郎' } };
 
 let failures = 0;
@@ -48,6 +50,7 @@ async function page(opts = {}) {
   await p.route(/supabase(\.min)?\.js/, r => r.fulfill({ contentType: 'text/javascript', body: FAKE_SUPABASE }));
   await p.route(/supabase\.co/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  if (opts.guest) await p.route(/config\.js/, r => r.fulfill({ contentType: 'text/javascript', body: CONFIG_GUEST }));
   if (opts.loggedIn) await p.addInitScript(u => { window.__session = { user: u }; }, USER);
   return { p, ctx, errors };
 }
@@ -205,6 +208,36 @@ async function page(opts = {}) {
   await p.click('#exam-start'); await p.waitForTimeout(500);
   check('zm3 mock starts in 財務諸表 section', /財務諸表/.test(await p.textContent('#quiz .qhead')) && (await p.$$('#quiz .choice')).length === 5);
   check('no JS errors (zm3)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// 6. ゲスト利用（allowGuest）→ ログインで引き継ぎ
+{
+  const { p, ctx, errors } = await page({ guest: true });
+  await p.goto(origin, { waitUntil: 'load' }); await p.waitForTimeout(600);
+  check('guest button shown on landing when allowGuest', await p.evaluate(() => { const b = document.querySelector('#gate-guest'); return !!b && !b.hidden && !document.querySelector('#gate').hidden; }));
+  await p.click('#gate-guest'); await p.waitForTimeout(400);
+  check('guest enters the app', await p.evaluate(() => document.querySelector('#gate').hidden && !document.querySelector('.app').hidden));
+  await p.goto(origin + '#/c/bk3/sched', { waitUntil: 'load' }); await p.waitForTimeout(1200);
+  check('guest can open a course and sees a login button', await p.evaluate(() => document.querySelector('.view.on')?.id === 'v-sched' && !document.querySelector('#head-login').hidden && document.querySelector('#avatar').hidden));
+  await p.click('#sched input[type=checkbox]'); await p.waitForTimeout(200);
+  await p.click('#nav button[data-view="home"]'); await p.waitForTimeout(300);
+  const g = await p.evaluate(() => { const st = JSON.parse(localStorage.getItem('kn2_local_bk3') || '{}'); return { sched: st.sched, nudge: !!document.querySelector('#guest-login') }; });
+  check('guest progress saved locally and sync nudge shown', !!(g.sched && g.sched['1']) && g.nudge, JSON.stringify(g));
+  await p.click('#guest-later'); await p.waitForTimeout(100);
+  check('nudge can be dismissed', !(await p.$('#guest-login')));
+  await p.evaluate(u => { window.__session = { user: u }; window.__authCb && window.__authCb('SIGNED_IN', { user: u }); }, USER); await p.waitForTimeout(1200);
+  const m = await p.evaluate(() => ({ local: localStorage.getItem('kn2_local_bk3'), user: (JSON.parse(localStorage.getItem('kn2_u-test_bk3') || '{}').sched || {}), guest: localStorage.getItem('kn_guest'), avatar: !document.querySelector('#avatar').hidden, head: document.querySelector('#head-login').hidden }));
+  check('guest progress migrated to the account on login', !m.local && !!m.user['1'] && !m.guest && m.avatar && m.head, JSON.stringify(m));
+  check('no JS errors (guest)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+// 7. allowGuest が無効なら従来どおり（ゲストボタンなし）
+{
+  const { p, ctx, errors } = await page({});
+  await p.goto(origin, { waitUntil: 'load' }); await p.waitForTimeout(500);
+  check('guest button hidden by default', await p.evaluate(() => document.querySelector('#gate-guest').hidden));
+  check('no JS errors (default gate)', errors.length === 0, errors.join(' | '));
   await ctx.close();
 }
 

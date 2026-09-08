@@ -15,6 +15,8 @@
   const LEVELS = window.LEVELS || {};
   const PASS = window.PASS_RATES || {};
   const SITE_NAME = SITE.name || '検定ノート';
+  /* アクセス解析（Cloudflare Web Analytics）：トークンがあるときだけ読み込む。Cookie もブラウザ保存領域も使わない */
+  if(SITE.analyticsToken && /^[0-9a-f]{32}$/i.test(SITE.analyticsToken)){ const a=document.createElement('script'); a.defer=true; a.src='https://static.cloudflareinsights.com/beacon.min.js'; a.setAttribute('data-cf-beacon', JSON.stringify({token:SITE.analyticsToken})); document.head.appendChild(a); }
   const VIEWS = ['home','notes','quiz','sched'];
 
   /* ---------- 小物 ---------- */
@@ -59,12 +61,16 @@
   /* =================== 認証（Supabase / Google） =================== */
   let sb=null, user=null;
   const REQUIRE_LOGIN = SITE.requireLogin !== false;
+  /* ゲスト利用：ログインせずに端末内保存で使う。ログインしたら端末内の進捗をアカウントに引き継ぐ */
+  const ALLOW_GUEST = REQUIRE_LOGIN && SITE.allowGuest === true;
+  let guestOn=false; try{ guestOn = ALLOW_GUEST && localStorage.getItem('kn_guest')==='1'; }catch(e){}
+  function isGuest(){ return !user && ALLOW_GUEST && guestOn; }
   const configured = !!(SITE.supabaseUrl && SITE.supabaseAnonKey && !/YOUR-/.test(SITE.supabaseUrl+SITE.supabaseAnonKey));
   try{ if(configured && window.supabase) sb = window.supabase.createClient(SITE.supabaseUrl, SITE.supabaseAnonKey, { auth:{ flowType:'pkce', detectSessionInUrl:true, persistSession:true, autoRefreshToken:true } }); }catch(e){ sb=null; }
   const RM = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches:false };
-  function gated(){ return REQUIRE_LOGIN && !user; }
+  function gated(){ return REQUIRE_LOGIN && !user && !isGuest(); }
   function uid(){ return user ? user.id : 'local'; }
-  function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=false; el.disabled=!(cls==='err'||cls==='pend'||cls==='ok'); }
+  function setSync(cls, txt){ const el=$('#sync'); el.className='sync '+cls; el.textContent=txt; el.hidden=isGuest(); el.disabled=!(cls==='err'||cls==='pend'||cls==='ok'); }
   function syncLabel(){
     if(!navigator.onLine) return ['offline','オフライン · 端末に保存中'];
     if(sb&&user) return ['ok','同期済み'];
@@ -78,6 +84,31 @@
   ['#gate-brand','#brand-link'].forEach(sel=>{ const el=$(sel); if(!el) return; const mark=el.querySelector('.mark'); el.textContent=''; if(mark) el.appendChild(mark); el.appendChild(document.createTextNode(SITE_NAME)); });
   if(SITE.contactEmail){ ['#gate-contact','#settings-contact'].forEach(s=>{ const a=$(s); a.href='mailto:'+SITE.contactEmail; a.hidden=false; }); }
   $$('[data-login]').forEach(b=>b.addEventListener('click', login));
+  if(ALLOW_GUEST){
+    const gb=$('#gate-guest'); if(gb){ gb.hidden=false; gb.addEventListener('click', startGuest); }
+    const ag=$('#gate-agree'); if(ag) ag.innerHTML='利用を開始すると<a href="terms.html">利用規約</a>と<a href="privacy.html">プライバシーポリシー</a>に同意したものとみなされます。ログインしない場合、進捗はこの端末のブラウザ内にだけ保存されます。';
+    const h1=$('#how1-t'), h1s=$('#how1-s'); if(h1){ h1.textContent='そのまま始める（ログインは任意）'; } if(h1s){ h1s.textContent='ログインなしでも全部使えます。Google でログインすると、スマホとPCで進捗を同期できます。'; }
+  }
+  function startGuest(){
+    guestOn=true; try{ localStorage.setItem('kn_guest','1'); }catch(e){}
+    renderAccount(); updateGate(); if(!/^#\/c\//.test(location.hash)) location.hash='#/'; route();
+  }
+  /* ゲストの進捗（kn2_local_*）を、ログインしたアカウントの進捗に合成して引き継ぐ */
+  function migrateGuestLocal(){
+    if(!user) return [];
+    const moved=[];
+    LIST.forEach(c=>{
+      try{
+        const k='kn2_local_'+c.id; const raw=localStorage.getItem(k); if(!raw) return;
+        const g=sanitize(JSON.parse(raw)); const has=g.updatedAt>0 || Object.keys(g.sched).length || Object.keys(g.wrong).length || Object.keys(g.best).length || g.plan;
+        if(has){ localStorage.setItem(lsKey(c.id), JSON.stringify(merge(readLocal(c.id), g))); moved.push(c.id); }
+        localStorage.removeItem(k);
+      }catch(e){}
+    });
+    try{ const last=localStorage.getItem('kn_last_local'); if(last && !localStorage.getItem('kn_last_'+uid())) localStorage.setItem('kn_last_'+uid(), last); localStorage.removeItem('kn_last_local'); }catch(e){}
+    guestOn=false; try{ localStorage.removeItem('kn_guest'); }catch(e){}
+    return moved;
+  }
   let started=false;
   function updateGate(){
     if(gated()){ gate.hidden=false; app.hidden=true; $('#nav').hidden=true; }
@@ -126,11 +157,11 @@
   window.addEventListener('online', async()=>{ if(offlineSession && sb){ try{ const { data } = await sb.auth.getSession(); if(data && data.session){ offlineSession=false; user=data.session.user; cacheUser(user); if(course) pullProgress(); } }catch(e){} } });
   async function login(){
     if(!sb){ toast('ログイン機能が利用できません。'); return; }
-    const btns=$$('[data-login]'); btns.forEach(b=>b.disabled=true); const lab=$('#gate-login-label'); const old=lab.textContent; lab.textContent='Google へ移動しています…';
+    const btns=$$('[data-login]'); btns.forEach(b=>b.disabled=true); const lab=$('#gate-login-label'); const old=lab?lab.textContent:''; if(lab) lab.textContent='Google へ移動しています…';
     try{ sessionStorage.setItem('kn_return', /^#\/[a-z0-9_\/-]*$/.test(location.hash) ? location.hash : '#/'); }catch(e){}
     const redirectTo = location.origin + location.pathname.replace(/index\.html$/, '');
     const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo, queryParams:{ prompt:'select_account' } } });
-    if(error){ gateStatus('ログインに失敗しました: '+error.message, true); btns.forEach(b=>b.disabled=false); lab.textContent=old; }
+    if(error){ gateStatus('ログインに失敗しました: '+error.message, true); btns.forEach(b=>b.disabled=false); if(lab) lab.textContent=old; toast('ログインに失敗しました。'); }
   }
   async function logout(){
     if(!sb) return;
@@ -146,7 +177,10 @@
   async function onUserChanged(){
     resetCourseState();
     migrateLegacyLocal();
+    const moved=migrateGuestLocal();
     await pullAll();
+    for(const cid of moved){ await pushNow(cid, readLocal(cid)); }
+    if(moved.length) toast('この端末の進捗をアカウントに引き継ぎました。');
   }
 
   /* ---- アカウント表示（ヘッダー・設定） ---- */
@@ -156,6 +190,7 @@
     const av=$('#avatar');
     if(user){ const pic=avatarUrl(); av.innerHTML = pic ? '<img src="'+esc(pic)+'" alt="" referrerpolicy="no-referrer">' : esc(displayName().slice(0,1)); av.hidden=false; }
     else { av.hidden=true; }
+    const hl=$('#head-login'); if(hl) hl.hidden=!isGuest();
     $('#menu-name').textContent=user?displayName():''; $('#menu-email').textContent=user?(user.email||''):'';
     renderIndex();
   }
@@ -664,9 +699,19 @@
       el.innerHTML='<div class="card"><p class="eyebrow">短縮プラン</p><p class="small muted" style="margin:0">試験までの日数が標準より短いため、ステップを圧縮しています。ノートは「30秒でつかむ」と赤シートの用語を優先し、問題を多めに回してください。</p></div>';
     } else el.innerHTML='';
   }
+  /* ゲストへの案内：進捗が付き始めたら一度だけ、同期のためのログインを勧める */
+  function renderGuestCard(){
+    const el=$('#guest-card'); if(!el) return;
+    let dismissed=false; try{ dismissed=localStorage.getItem('kn_guest_nudge')==='1'; }catch(e){}
+    const has=Object.keys(store.get('sched',{})).length>0 || Object.keys(store.get('wrong',{})).length>0 || Object.keys(store.get('best',{})).length>0;
+    if(!isGuest() || !sb || dismissed || !has){ el.innerHTML=''; return; }
+    el.innerHTML='<div class="card"><p class="eyebrow">進捗の保存先</p><p class="small" style="margin:0 0 10px">今は進捗をこの端末のブラウザ内にだけ保存しています。Google でログインすると、スマホとPCで同じ進捗を使え、ブラウザのデータを消しても残ります。</p><div class="row"><button type="button" class="btn small primary" id="guest-login">ログインして同期する</button><button type="button" class="btn small ghost" id="guest-later">このままでいい</button></div></div>';
+    $('#guest-login').addEventListener('click', login);
+    $('#guest-later').addEventListener('click', ()=>{ try{ localStorage.setItem('kn_guest_nudge','1'); }catch(e){} el.innerHTML=''; });
+  }
   function renderHome(){
     const c=course, S=STEPS();
-    renderPlanNotice(); renderDeadline();
+    renderPlanNotice(); renderDeadline(); renderGuestCard();
     const d=S[Math.min(homeStep,S.length-1)]; const checks=store.get('sched',{}); const startedPlan=todayStr()>=S[0].s; const ti=todayIndex(); const isNow=startedPlan && S[ti].n===d.n; const ahead=startedPlan && !isNow && homeStep>ti && S.slice(ti,homeStep).every(x=>checks[x.n]);
     let steps='';
     if(d.read.length) steps+='<li><span class="t">15分</span><span>ノートを読む：'+d.read.map(id=>'<a href="#" data-ch="'+id+'">'+esc(chapterTitle(id))+'</a>').join('、')+'</span><span><button class="btn small primary" data-ch="'+d.read[0]+'">開く</button></span></li>';
@@ -1036,10 +1081,12 @@
     if(course){ leaveCourseUI(); course=null; lastCourseId=null; abortExam(); }
     const el=$('#settings-account');
     if(user){ el.innerHTML='<h3 style="margin-top:0">アカウント</h3><dl class="kv"><dt>名前</dt><dd>'+esc(displayName())+'</dd><dt>メール</dt><dd>'+esc(user.email||'')+'</dd><dt>ログイン方法</dt><dd>Google</dd></dl><div class="row" style="margin-top:12px"><button type="button" class="btn small" id="settings-logout">ログアウト</button></div>'; $('#settings-logout').addEventListener('click', ()=>$('#menu-logout').click()); }
-    else el.innerHTML='<h3 style="margin-top:0">アカウント</h3><p class="small muted" style="margin:0">ログインしていません。進捗はこの端末にだけ保存されます。</p>';
+    else { el.innerHTML='<h3 style="margin-top:0">アカウント</h3><p class="small muted" style="margin:0">ログインしていません。進捗はこの端末のブラウザ内にだけ保存されます。ブラウザのデータを消すと失われます。</p>'+(sb?'<div class="row" style="margin-top:12px"><button type="button" class="btn small primary" id="settings-login">Google でログインして同期する</button></div>':''); const sl=$('#settings-login'); if(sl) sl.addEventListener('click', login); }
+    const dc=$('#delete-account').closest('.card'); if(dc) dc.hidden=!user;
+    const bkNote=$('#bk-course').closest('.card').querySelector('p.small'); if(bkNote) bkNote.textContent = user ? '進捗はログイン中のアカウントに自動保存されます。念のため手元に控えたい場合や、別アカウントへ移す場合に使います。' : '進捗はこの端末にだけ保存されています。別の端末へ移したい場合や、ブラウザのデータを消す前の控えに使います。';
     const sel=$('#bk-course'); sel.innerHTML=LIST.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join('');
     try{ const last=localStorage.getItem('kn_last_'+uid()); if(last) sel.value=last; }catch(e){}
-    $('#version-line').textContent='検定ノート v'+APP_VERSION;
+    $('#version-line').textContent=SITE_NAME+' v'+APP_VERSION;
     $('#bk-code').hidden=true;
     showView('settings');
   }

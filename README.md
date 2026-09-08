@@ -32,6 +32,22 @@ scripts/stamp-version.mjs   config.js の version を index.html / sw.js に反�
 .github/workflows/ci.yml    push ごとに構文チェックとスモークテスト
 ```
 
+## サイトの切り替え（config.js）
+
+| 設定 | 検定ノート（身内用） | 譲渡用サイト |
+|---|---|---|
+| `requireLogin` | true | true |
+| `allowGuest` | false | true：トップに「ログインせずに始める」。進捗は `kn2_local_<course>` に端末内保存し、ログイン時にアカウントの進捗へ合成して引き継ぐ |
+| `analyticsToken` | 空 | Cloudflare Web Analytics のトークン（Cookie 不使用） |
+
+## 譲渡用サイトの作り方
+
+1. 譲渡用の Google アカウントで GitHub Organization・Cloudflare（ドメイン取得と Web Analytics）・Supabase プロジェクトを作る
+2. このリポジトリをその Organization にフォークし、`config.js` の `name` / `baseUrl` / `allowGuest` / `analyticsToken` / Supabase の URL と key を差し替える
+3. `privacy.transfer.html` を `privacy.html` に置き換える（ゲスト利用・アクセス解析・任意プロフィール・事業承継の条項入り）。`terms.html` / `tokushoho.html` / `about.html` / `404.html` / `manifest.webmanifest` / `index.html` のサイト名を一括置換し、`【事業者名】` などの穴を埋める
+4. `npm run build:guide` で公開ガイド・sitemap・llms.txt を新ドメインで生成し直す
+5. 身内用（このリポジトリ）は `robots.txt` を `Disallow: /` にして公開ガイドを外す
+
 ## 公開手順（GitHub Pages）
 
 1. リポジトリを public にする（無料プランでは private で Pages を使えない）
