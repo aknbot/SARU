@@ -30,6 +30,7 @@ const FAKE_SUPABASE = `window.supabase={createClient(){return{auth:{
   from(){const q={select(){return q},eq(){return q},async maybeSingle(){return{data:null,error:null}},async upsert(){return{error:null}},async delete(){return q}};return q},
   async rpc(){return{error:null}} }}};`;
 const CONFIG_GUEST = readFileSync(new URL('../config.js', import.meta.url), 'utf8').replace(/allowGuest:\s*false/, 'allowGuest: true');
+const CONFIG_GUEST_NOSB = CONFIG_GUEST.replace(/supabaseUrl:\s*'[^']*'/, "supabaseUrl: 'https://YOUR-PROJECT.supabase.co'").replace(/supabaseAnonKey:\s*'[^']*'/, "supabaseAnonKey: 'YOUR-KEY'");
 const USER = { id: 'u-test', email: 'test@example.com', user_metadata: { full_name: 'テスト太郎' } };
 
 let failures = 0;
@@ -50,7 +51,7 @@ async function page(opts = {}) {
   await p.route(/supabase(\.min)?\.js/, r => r.fulfill({ contentType: 'text/javascript', body: FAKE_SUPABASE }));
   await p.route(/supabase\.co/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{}' }));
   await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
-  if (opts.guest) await p.route(/config\.js/, r => r.fulfill({ contentType: 'text/javascript', body: CONFIG_GUEST }));
+  if (opts.guest) await p.route(/config\.js/, r => r.fulfill({ contentType: 'text/javascript', body: opts.noSb ? CONFIG_GUEST_NOSB : CONFIG_GUEST }));
   if (opts.loggedIn) await p.addInitScript(u => { window.__session = { user: u }; }, USER);
   return { p, ctx, errors };
 }
@@ -238,6 +239,19 @@ async function page(opts = {}) {
   await p.goto(origin, { waitUntil: 'load' }); await p.waitForTimeout(500);
   check('guest button hidden by default', await p.evaluate(() => document.querySelector('#gate-guest').hidden));
   check('no JS errors (default gate)', errors.length === 0, errors.join(' | '));
+  await ctx.close();
+}
+
+// 8. ログイン基盤が未設定でも、allowGuest ならゲストだけで公開できる
+{
+  const { p, ctx, errors } = await page({ guest: true, noSb: true });
+  await p.goto(origin, { waitUntil: 'load' }); await p.waitForTimeout(600);
+  const st = await p.evaluate(() => ({ gate: !document.querySelector('#gate').hidden, guest: !document.querySelector('#gate-guest').hidden, login: document.querySelector('#gate-login').hidden, note: document.querySelector('#gate-note').hidden }));
+  check('guest-only landing without Supabase (login hidden, no error)', st.gate && st.guest && st.login && st.note, JSON.stringify(st));
+  await p.click('#gate-guest'); await p.waitForTimeout(400);
+  await p.goto(origin + '#/c/bk3/notes', { waitUntil: 'load' }); await p.waitForTimeout(1200);
+  check('guest-only course works without Supabase', (await p.$$('#v-notes details.ch')).length >= 5 && (await p.evaluate(() => document.querySelector('#head-login').hidden)));
+  check('no JS errors (guest-only)', errors.filter(e => !/supabase/i.test(e)).length === 0, errors.join(' | '));
   await ctx.close();
 }
 

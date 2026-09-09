@@ -124,6 +124,12 @@
   async function initAuth(){
     if(!REQUIRE_LOGIN && !sb){ updateGate(); return; }
     if(!sb){
+      if(ALLOW_GUEST && !configured){
+        /* ログイン基盤が未設定でもゲスト利用だけで公開できる（立ち上げ期用） */
+        $$('[data-login]').forEach(b=>{ b.hidden=true; });
+        gateStatus('現在はログインなしで利用できます（進捗はこの端末に保存されます）。');
+        renderAccount(); updateGate(); return;
+      }
       gateStatus(configured?'ログイン機能を読み込めませんでした。通信環境をご確認のうえ、ページを再読み込みしてください。':'ログイン機能が設定されていません（config.js）。', true);
       $$('[data-login]').forEach(b=>b.disabled=true);
       gate.hidden=false; app.hidden=true; return;
@@ -190,7 +196,7 @@
     const av=$('#avatar');
     if(user){ const pic=avatarUrl(); av.innerHTML = pic ? '<img src="'+esc(pic)+'" alt="" referrerpolicy="no-referrer">' : esc(displayName().slice(0,1)); av.hidden=false; }
     else { av.hidden=true; }
-    const hl=$('#head-login'); if(hl) hl.hidden=!isGuest();
+    const hl=$('#head-login'); if(hl) hl.hidden=!(isGuest()&&sb);
     $('#menu-name').textContent=user?displayName():''; $('#menu-email').textContent=user?(user.email||''):'';
     renderIndex();
   }
